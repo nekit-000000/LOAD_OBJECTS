@@ -1,0 +1,50 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+
+# Executables
+*.exe
+*.out
+*.app
+
+# folder Debug
+Debug/
+
+# folder Release
+Release/
+<<<<<<< HEAD
+
+.vs/dsMAP/v14/.suo
+*.log
+=======
+.vs/dsMAP/v14/.suo
+*.log
+Debug/dsMAP.tlog/link.command.1.tlog
+Debug/dsMAP.tlog/link.read.1.tlog
+>>>>>>> 10e33c499dbae6b79b96c9ca2b7910fd0644b42a
+*.tlog
+dsMAP.vcxproj.user
+*.idb
+*.pdb
+*.db
