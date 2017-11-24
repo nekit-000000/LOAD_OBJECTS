@@ -1,7 +1,8 @@
 /* START OF 'camera.cpp' FILE */
 
-#include "camera.h"
 #include <glm/gtx/transform.hpp>
+
+#include "camera.h"
 
 
 CAMERA::CAMERA (void) : 
@@ -12,6 +13,20 @@ CAMERA::CAMERA (void) :
 
 CAMERA::~CAMERA(void)
 {
+}
+
+
+void CAMERA::MouseUpdate (const POINT & mouseDelta, const float rotationSpeed)
+{
+   float angleX = mouseDelta.x * rotationSpeed;
+   float angleY = mouseDelta.y * rotationSpeed;
+
+   // Horizontal rotation
+   viewDirection = glm::mat3(glm::rotate(angleX, up)) * viewDirection;
+
+   // Vertical rotation
+   glm::vec3 rotateAround = glm::cross(viewDirection, up);
+   viewDirection = glm::mat3(glm::rotate(angleY, rotateAround)) * viewDirection;
 }
 
 

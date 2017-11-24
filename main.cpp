@@ -1,7 +1,5 @@
 /* START OF 'main.cpp' FILE */
 
-#include <vld.h>
-#include <gl/glew.h>
 #include <windows.h>
 #include "display.h"
 

@@ -1,13 +1,14 @@
 /* START OF 'primitive.cpp' FILE */
 
 #include <vector>
-#include <iostream>
 #include <fstream>
+#include <windows.h>
+
 #include "primitive.h"
 
 
 VERTEX::VERTEX (const glm::vec3 & position) : 
-   position(position), color(1, 1, 1), normal(0, 0,0)
+   position(position), color(1, 1, 1), normal(0, 0, 0)
 {
 
 }
@@ -34,6 +35,20 @@ VERTEX::VERTEX (const glm::vec3 & position, const glm::vec3 & normal) :
 }
 
 VERTEX::~VERTEX (void)
+{
+
+}
+
+
+POLYGON::POLYGON (VERTEX vert[3])
+{
+   for (int i = 0; i < 3; i++) {
+      vertices[i] = vert[i];
+   }
+}
+
+
+POLYGON::~POLYGON (void)
 {
 
 }
@@ -70,19 +85,6 @@ glm::vec4 VERTEX::Transform (const glm::mat4 & matr) const
 }
 
 
-void PRIMITIVE::Draw (int width, int height) const
-{
-   glm::mat4 matrix = projectionMatrix * viewMatrix;
-   for (auto it = vertices.begin(); it != vertices.end(); ++it) {
-      glm::vec4 temp_vec(it->position.x, it->position.y, it->position.z, 1);
-      glm::vec4 vec = matrix * temp_vec;
-      vec.x *= ((float)height) / width;
-      glColor3d(it->color.x, it->color.y, it->color.z);
-      glVertex2d(vec.x / vec.w, vec.y / vec.w);
-   }
-}
-
-
 bool PRIMITIVE::Load (const std::string & fileName, double scale)
 {
    std::vector<unsigned int> vertexIndices, uvIndices, normalIndices;
@@ -91,7 +93,6 @@ bool PRIMITIVE::Load (const std::string & fileName, double scale)
    std::vector<glm::vec3> temp_normals;
    bool loadTextureCoord = false;
    bool loadNormals = false;
-   
 
    std::fstream ifs(fileName);
 
@@ -126,11 +127,13 @@ bool PRIMITIVE::Load (const std::string & fileName, double scale)
          temp_uvs.push_back(uv);
       } else if (line == "f") {
          size_t vertexIndex, uvIndex, normalIndex;
+         VERTEX polygon[3];
          char c;
          
          for (int i = 0; i < 3; i++) {
             ifs >> vertexIndex;
             vertexIndices.push_back(vertexIndex);
+            polygon[i].position = temp_vertices[vertexIndex - 1];
 
             if (loadTextureCoord == true) {
                // Skip slashes
@@ -156,35 +159,23 @@ bool PRIMITIVE::Load (const std::string & fileName, double scale)
                normalIndices.push_back(normalIndex);
             }
          }
+
+         polygons.push_back(polygon);
+         for (int i = 0; i < 3; i++) {
+            vertices.push_back(polygon[i]);
+         }
       }
-   }
-
-
-   for (size_t i = 0; i < vertexIndices.size(); i++) {
-      vertices.push_back(temp_vertices[vertexIndices[i] - 1]); // OBJ indices start with 1
    }
 
    if (loadNormals == true) {
       for (size_t i = 0; i < normalIndices.size(); i++) {
-         vertices[i].normal = temp_normals[normalIndices[i] - 1];
+         vertices[i].normal = temp_normals[normalIndices[i] - 1]; // OBJ indices start with 1
       }
    }
    
    ifs.close();
 
    return true;
-}
-
-
-void PRIMITIVE::SetView (const glm::mat4 & matr)
-{
-   viewMatrix = matr;
-}
-
-
-void PRIMITIVE::SetProjection(const glm::mat4 & matr)
-{
-   projectionMatrix = matr;
 }
 
 

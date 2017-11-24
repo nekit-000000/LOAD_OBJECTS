@@ -5,12 +5,13 @@
 #define PRIMITIVE_H
 
 #include <glm/glm.hpp>
-#include <GL/glew.h>
 #include <string>
 
 
 class VERTEX {
    friend class PRIMITIVE;
+   friend class DISPLAY;
+
 public:
    VERTEX (void);
    VERTEX (const glm::vec3 & position);
@@ -32,23 +33,36 @@ private:
 };
 
 
-class PRIMITIVE {
+
+class POLYGON {
+   friend class PRIMITIVE;
+   friend class DISPLAY;
+
 public:
-   PRIMITIVE (void);
-   PRIMITIVE (VERTEX * vert, size_t numOfVert);
-   PRIMITIVE (std::vector<VERTEX> & vertices);
+   POLYGON (VERTEX vert[3]);
+
+   ~POLYGON (void);
+
+private:
+   VERTEX vertices[3];
+};
+
+
+class PRIMITIVE {
+   friend class DISPLAY;
+
+public:
+   PRIMITIVE  (void);
+   PRIMITIVE  (VERTEX * vert, size_t numOfVert);
+   PRIMITIVE  (std::vector<VERTEX> & vertices);
 
    ~PRIMITIVE (void);
 
-   void Draw          (int width, int height) const;
-   bool Load          (const std::string & fileName, double scale);
-   void SetView       (const glm::mat4 & matr);
-   void SetProjection (const glm::mat4 & matr);
+   bool Load  (const std::string & fileName, double scale);
 
 private:
    std::vector<VERTEX> vertices;
-   glm::mat4 viewMatrix;
-   glm::mat4 projectionMatrix;
+   std::vector<POLYGON> polygons;
 };
 
 
