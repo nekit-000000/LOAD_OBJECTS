@@ -146,10 +146,11 @@ void DISPLAY::CreateDIB (HDC hDC, HBITMAP * hBitmap, COLORREF ** bitPointer, BIT
 }
 
 
-void DISPLAY::PutPixel(COLORREF * bitPointer, COLORREF color, int x, int y, int winWidth, int winHeight)
+void DISPLAY::PutPixel (COLORREF * bitPointer, COLORREF color, int x, int y, int winWidth, int winHeight)
 {
-   if ((winHeight - y) <= 0 || x >= winWidth || x <= 0 || (winHeight - y) >= winHeight)
+   if ((winHeight - y) <= 0 || x >= winWidth || x <= 0 || (winHeight - y) >= winHeight) {
       return;
+   }
 
    bitPointer[(winHeight - y) * winWidth + x] = color;
 }
@@ -317,17 +318,17 @@ LONG WINAPI DISPLAY::DisplayProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM
       Offset = glm::vec3(0, 0, 0);
       switch (wParam) {
       case VK_LEFT:
-            Offset.x -= DISPLAY::moveSpeed;
-            break;
+         Offset.x -= DISPLAY::moveSpeed;
+         break;
       case VK_RIGHT:
-            Offset.x += DISPLAY::moveSpeed;
-            break;
+         Offset.x += DISPLAY::moveSpeed;
+         break;
       case VK_UP: 
-            Offset.z -= DISPLAY::moveSpeed;
-            break;
+         Offset.z -= DISPLAY::moveSpeed;
+         break;
       case VK_DOWN:
-            Offset.z += DISPLAY::moveSpeed;
-            break;
+         Offset.z += DISPLAY::moveSpeed;
+         break;
       case VK_SPACE:
          Event = EVENT::SWITCHMODE;
          break;

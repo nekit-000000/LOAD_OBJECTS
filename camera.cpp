@@ -11,7 +11,7 @@ CAMERA::CAMERA (void) :
 }
 
 
-CAMERA::~CAMERA(void)
+CAMERA::~CAMERA (void)
 {
 }
 
