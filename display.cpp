@@ -8,7 +8,7 @@
 
 
 // Variables declaration
-float DISPLAY::moveSpeed = 0.07f;
+float DISPLAY::moveSpeed = 0.1f;
 float DISPLAY::rotationSpeed = 0.01f;
 
 
@@ -22,6 +22,7 @@ enum class EVENT {
 } Event;
 glm::vec3 Offset;
 POINT NewMousePos;
+POINT OldMousePos;
 
 
 DISPLAY::DISPLAY (void) : 
@@ -34,6 +35,56 @@ DISPLAY::DISPLAY (void) :
 
 DISPLAY::~DISPLAY (void)
 {
+}
+
+
+DISPLAY::COLOURED_POINT::COLOURED_POINT (void) :
+   pos(0, 0), color(RGB(0, 0, 0)), depth(0)
+{
+}
+
+
+DISPLAY::COLOURED_POINT::COLOURED_POINT (int x, int y, COLORREF newColor) :
+   pos(x, y), color(newColor), depth(0)
+{
+}
+
+
+DISPLAY::COLOURED_POINT::COLOURED_POINT(int x, int y, double depth, COLORREF newColor) :
+   pos(x, y), color(newColor), depth(depth)
+{
+}
+
+DISPLAY::COLOURED_POINT::COLOURED_POINT(const glm::ivec2 & newPos, COLORREF newColor) :
+   pos(newPos), color(newColor), depth(0)
+{
+}
+
+
+DISPLAY::COLOURED_POINT::COLOURED_POINT(const glm::ivec2 & newPos, double depth, COLORREF newColor) :
+   pos(newPos), color(newColor), depth(depth)
+{
+}
+
+
+DISPLAY::COLOURED_POINT::COLOURED_POINT (const COLOURED_POINT & copyPoint) :
+   pos(copyPoint.pos), color(copyPoint.color), depth(copyPoint.depth)
+{
+}
+
+
+DISPLAY::COLOURED_POINT::~COLOURED_POINT (void)
+{
+}
+
+
+DISPLAY::COLOURED_POINT & DISPLAY::COLOURED_POINT::operator= (const COLOURED_POINT & copyPoint)
+{
+   pos = copyPoint.pos;
+   color = copyPoint.color;
+   depth = copyPoint.depth;
+
+   return *this;
 }
 
 
@@ -156,22 +207,54 @@ void DISPLAY::PutPixel (COLORREF * bitPointer, COLORREF color, int x, int y, int
 }
 
 
-void DISPLAY::Line (COLORREF * bitPointer, int x0, int y0, int x1, int y1, COLORREF color, int winWidth, int winHeight)
+COLORREF DISPLAY::InterpolateColors (COLORREF color0, COLORREF color1, double coeff)
 {
-   int dx = abs(x1 - x0);
-   int dy = abs(y1 - y0);
-   int sx = (x1 >= x0) ? 1 : -1;
-   int sy = (y1 >= y0) ? 1 : -1;
+   int r[2];
+   int g[2];
+   int b[2];
+
+   r[0] = GetRValue(color0);
+   r[1] = GetRValue(color1);
+   g[0] = GetGValue(color0);
+   g[1] = GetGValue(color1);
+   b[0] = GetBValue(color0);
+   b[1] = GetBValue(color1);
+
+   int newR;
+   int newG;
+   int newB;
+
+   newR = (int)((1 - coeff) * r[0] + coeff * r[1]);
+   newG = (int)((1 - coeff) * g[0] + coeff * g[1]);   newB = (int)((1 - coeff) * b[0] + coeff * b[1]);
+   return RGB(newR, newG, newB);
+}
+
+
+void DISPLAY::DrawLine (COLORREF * bitPointer, COLOURED_POINT & point1, 
+   COLOURED_POINT & point2, int winWidth, int winHeight, double * zBuffer)
+{
+   int dx = abs(point2.pos.x - point1.pos.x);
+   int dy = abs(point2.pos.y - point1.pos.y);
+   int sx = (point2.pos.x >= point1.pos.x) ? 1 : -1;
+   int sy = (point2.pos.y >= point1.pos.y) ? 1 : -1;
+   double segmentLen = sqrt(dx * dx + dy * dy);
+    
+   if ((point1.pos.x < 0 && point2.pos.x < 0) || 
+       (point1.pos.x > winWidth && point2.pos.x > winWidth) ||
+       (point1.pos.y < 0 && point2.pos.y < 0) ||
+       (point1.pos.y > winHeight && point2.pos.y > winHeight)) {
+      return;
+   }
 
    if (dy < dx) {
       int d = (dy << 1) - dx;
       int d1 = dy << 1;
       int d2 = (dy - dx) << 1;
 
-      PutPixel(bitPointer, color, x0, y0, winWidth, winHeight);
+      PutPixel(bitPointer, point1.color, point1.pos.x, point1.pos.y, winWidth, winHeight);
 
-      int x = x0 + sx;
-      int y = y0;
+      int x = point1.pos.x + sx;
+      int y = point1.pos.y;
       for (int i = 1; i <= dx; i++) {
          if (d > 0) {
             d += d2;
@@ -180,7 +263,48 @@ void DISPLAY::Line (COLORREF * bitPointer, int x0, int y0, int x1, int y1, COLOR
             d += d1;
          }
 
-         PutPixel(bitPointer, color, x, y, winWidth, winHeight);
+         if (x < 0) {
+            if (sx < 0) {
+               break;
+            } else {
+               x += sx;
+               continue;
+            }
+         } else if (x >= winWidth) {
+            if (sx > 0) {
+               break;
+            } else {
+               x += sx;
+               continue;
+            }
+         }
+
+         if (y < 0) {
+            if (sy < 0) {
+               break;
+            } else {
+               x += sx;
+               continue;
+            }
+         } else if (y >= winHeight) {
+            if (sy > 0) {
+               break;
+            } else {
+               x += sx;
+               continue;
+            }
+         }
+
+         double dz = point1.depth + (point2.depth - point1.depth) * ((float)i / dx);
+         int idx = x + y * winWidth;
+         if (zBuffer[idx] <= dz) {
+            zBuffer[idx] = dz;
+            double currLen = sqrt((x - point1.pos.x) * (x - point1.pos.x) +
+               (y - point1.pos.y) * (y - point1.pos.y));
+            double lenCoeff = currLen / segmentLen;
+            COLORREF resColor = InterpolateColors(point1.color, point2.color, lenCoeff);
+            PutPixel(bitPointer, resColor, x, y, winWidth, winHeight);
+         }
          x += sx;
       }
    } else {
@@ -188,10 +312,10 @@ void DISPLAY::Line (COLORREF * bitPointer, int x0, int y0, int x1, int y1, COLOR
       int d1 = dx << 1;
       int d2 = (dx - dy) << 1;
 
-      PutPixel(bitPointer, color, x0, y0, winWidth, winHeight);
+      PutPixel(bitPointer, point1.color, point1.pos.x, point1.pos.y, winWidth, winHeight);
 
-      int x = x0;
-      int y = y0 + sy;
+      int x = point1.pos.x;
+      int y = point1.pos.y + sy;
       for (int i = 1; i <= dy; i++) {
          if (d > 0) {
             d += d2;
@@ -200,8 +324,161 @@ void DISPLAY::Line (COLORREF * bitPointer, int x0, int y0, int x1, int y1, COLOR
             d += d1;
          }
 
-         PutPixel(bitPointer, color, x, y, winWidth, winHeight);
+         if (x < 0) {
+            if (sx < 0) {
+               break;
+            } else {
+               y += sy;
+               continue;
+            }
+         } else if (x >= winWidth) {
+            if (sx > 0) {
+               break;
+            } else {
+               y += sy;
+               continue;
+            }
+         }
+
+         if (y < 0) {
+            if (sy < 0) {
+               break;
+            } else {
+               y += sy;
+               continue;
+            }
+         } else if (y >= winHeight) {
+            if (sy > 0) {
+               break;
+            } else {
+               y += sy;
+               continue;
+            }
+         }
+
+         double dz = point1.depth + (point2.depth - point1.depth) * ((float)i / dy);
+         int idx = x + y * winWidth;
+         if (zBuffer[idx] <= dz) {
+            zBuffer[idx] = dz;
+            double currLen = sqrt((x - point1.pos.x) * (x - point1.pos.x) +
+               (y - point1.pos.y) * (y - point1.pos.y));
+            double lenCoeff = currLen / segmentLen;
+            COLORREF resColor = InterpolateColors(point1.color, point2.color, lenCoeff);
+            PutPixel(bitPointer, resColor, x, y, winWidth, winHeight);
+         }
          y += sy;
+      }
+   }
+}
+
+
+void DISPLAY::DrawTriangle (COLORREF * bitPointer, COLOURED_POINT point1,
+   COLOURED_POINT point2, COLOURED_POINT point3, int winWidth, int winHeight, double * zBuffer)
+{
+   // Sorting points by y
+   if (point1.pos.y > point2.pos.y) {
+      std::swap(point1, point2);
+   }
+   if (point1.pos.y > point3.pos.y) {
+      std::swap(point1, point3);
+   }
+   if (point2.pos.y > point3.pos.y) {
+      std::swap(point2, point3);
+   }
+
+   int totalHeight = point3.pos.y - point1.pos.y;
+   if (totalHeight == 0 || point1.pos.y + totalHeight < 0 || point1.pos.y > winHeight) {
+      return;
+   }
+
+   int firstHalfHeight = point2.pos.y - point1.pos.y;
+   int secondHalfHeight = point3.pos.y - point2.pos.y;
+   if (firstHalfHeight == 0) {
+      firstHalfHeight++;
+   }
+   if (secondHalfHeight == 0) {
+      secondHalfHeight++;
+   }
+
+   glm::ivec2 segment13 = point3.pos - point1.pos;
+   glm::ivec2 segment12 = point2.pos - point1.pos;
+   glm::ivec2 segment32 = point3.pos - point2.pos;
+   double length32 = sqrt(segment32.x * segment32.x + segment32.y * segment32.y);
+   double length13 = sqrt(segment13.x * segment13.x + segment13.y * segment13.y);
+   double length12 = sqrt(segment12.x * segment12.x + segment12.y * segment12.y);
+   for (int y = 0; y <= totalHeight; y++) {
+      if (y + point1.pos.y >=  winHeight) {
+         break;
+      } else if (point1.pos.y + y < 0) {
+         y -= point1.pos.y;
+      }
+
+      // Counting coordinates
+      float alpha = (float)y / totalHeight;
+      int x1 = point1.pos.x + (int)((point3.pos.x - point1.pos.x) * alpha);
+
+      float beta;
+      int x2;
+      if (y < firstHalfHeight) { // Drawing first half
+         beta = (float)y / firstHalfHeight;
+         x2 = point1.pos.x + (int)((point2.pos.x - point1.pos.x) * beta);
+      } else { // Drawing second half
+         beta = (float)(y - firstHalfHeight) / secondHalfHeight;
+         x2 = point2.pos.x + (int)((point3.pos.x - point2.pos.x) * beta);
+      }
+
+
+      // Counting interpolated color value
+      double currLen1 = sqrt(y * y + (x1 - point1.pos.x) * (x1 - point1.pos.x));
+      double lenCoeff1 = currLen1 / length13;
+      COLORREF color1 = InterpolateColors(point1.color, point3.color, lenCoeff1);
+
+      double currLen2;
+      double lenCoeff2;
+      COLORREF color2;
+      if (y < firstHalfHeight) {
+         currLen2 = sqrt(y * y + (x2 - point1.pos.x) * (x2 - point1.pos.x));
+         lenCoeff2 = currLen2 / length12;
+         color2 = InterpolateColors(point1.color, point2.color, lenCoeff2);
+      } else {
+         currLen2 = sqrt((y - firstHalfHeight) * (y - firstHalfHeight) +
+            (x2 - point2.pos.x) * (x2 - point2.pos.x));
+         lenCoeff2 = currLen2 / length32;
+         color2 = InterpolateColors(point2.color, point3.color, lenCoeff2);
+      }
+
+      // Filling in between lines
+      double z1 = point1.depth + ((point3.depth - point1.depth) * alpha);
+      double z2;
+      if (y < firstHalfHeight) {
+         z2 = point1.depth + ((point2.depth - point1.depth) * beta);
+      } else {
+         z2 = point2.depth + ((point3.depth - point2.depth) * beta);
+      }
+
+      if (x1 > x2) {
+         std::swap(x1, x2);
+         std::swap(color1, color2);
+         std::swap(z1, z2);
+      }
+
+      double segmentLen = sqrt((x2 - x1) * (x2 - x1));
+      if (segmentLen == 0) {
+         segmentLen++;
+      }
+
+      for (int j = x1 > 0 ? x1 : 0; j <= x2 && j < winWidth; j++) {
+         float phi = x2 == x1 ? 1.0f : (float)(j - x1) / (float)(x2 - x1);
+         double pz = z1 + (z2 - z1) * phi;
+         int idx = j + (y + point1.pos.y) * winWidth;
+
+         if (zBuffer[idx] < pz) {
+            zBuffer[idx] = pz;
+            double currLen = sqrt((j - x1) * (j - x1));
+            double lenCoeff = currLen / segmentLen;
+            COLORREF resColor = InterpolateColors(color1, color2, lenCoeff);
+            PutPixel(bitPointer, resColor, j, point1.pos.y + y, winWidth, winHeight);
+         }
       }
    }
 }
@@ -243,44 +520,76 @@ void DISPLAY::Draw (void) const
    FillRect(hMemDC, &rect, brush);
 
    glm::mat4 worldMatrix = GetProjectionMatrix() * camera.GetWorldToViewMatrix();
+   double * zBuffer = new double[winWidth * winHeight];
 
-   for (size_t i = 0; i < primitives.size(); i++) {
-      std::vector<POLYGON> polygons = primitives[i].polygons;
+   for (auto primIt = primitives.begin(); primIt != primitives.end(); ++primIt) {
+      size_t indSize = primIt->vertexIndices.size();
+      std::vector<glm::vec3> transformedCoords;
 
-      for (size_t j = 0; j < polygons.size(); j++) {
-         VERTEX coords[3];
+      for (size_t i = 0; i < primIt->vertices.size(); i++) {
+         glm::vec3 vert = primIt->vertices[i];
+         glm::vec4 tempVec(vert, 1);
+         glm::vec4 vec = worldMatrix * tempVec;
+         glm::vec3 pos;
 
-         for (int i = 0; i < 3; i++) {
-            VERTEX vert = polygons[j].vertices[i];
-            glm::vec4 temp_vec(vert.position, 1);
-            glm::vec4 vec = worldMatrix * temp_vec;
-            glm::vec3 & pos = coords[i].position;
+         pos = vec;
+         pos.x *= ((float)winHeight / winWidth);
+         pos.x /= fabs(vec.w);
+         pos.y /= fabs(vec.w);
+         pos.z /= fabs(vec.w);
 
-            pos.x = vec.x;
-            pos.y = vec.y;
-            pos.x *= ((float)winHeight) / winWidth;
-            pos.x /= vec.w;
-            pos.y /= vec.w;
-            pos.x = pos.x * (winWidth / 2) + winWidth / 2;
-            pos.y = pos.y * (winHeight / 2) + winHeight / 2;
-            pos.y = (float)(winHeight - (int)pos.y);
-            
-            coords[i].color = vert.color;
-            if (displayMode == DISPLAY_MODE::POINTS) {
-               COLORREF color = RGB(255 * vert.color.b, 255 *  vert.color.g, 255 *  vert.color.r);
-               PutPixel(bitPointer, color, (int)pos.x, (int)pos.y, winWidth, winHeight);
-            }
+         if (vec.w < 0) {
+            pos.z = -fabs(pos.z);
          }
 
+         pos.x = pos.x * (winWidth / 2) + winWidth / 2;
+         pos.y = pos.y * (winHeight / 2) + winHeight / 2;
+         pos.y = (float)(winHeight - pos.y);
 
-         if (displayMode == DISPLAY_MODE::WIREFRAME) {
-            COLORREF color = RGB(255 * coords[0].color.b, 255 *  coords[0].color.g, 255 *  coords[0].color.r);
-            Line(bitPointer, (int)coords[0].position.x, (int)coords[0].position.y, 
-               (int)coords[1].position.x, (int)coords[1].position.y, color, winWidth, winHeight);
-            Line(bitPointer, (int)coords[1].position.x, (int)coords[1].position.y, 
-               (int)coords[2].position.x, (int)coords[2].position.y, color, winWidth, winHeight);
-            Line(bitPointer, (int)coords[2].position.x, (int)coords[2].position.y, 
-               (int)coords[0].position.x, (int)coords[0].position.y, color, winWidth, winHeight);
+         transformedCoords.push_back(pos);
+      }
+
+      if (displayMode == DISPLAY_MODE::POINTS) {
+         for (size_t i = 0; i < indSize; i++) {
+            glm::vec3 vec = transformedCoords[primIt->vertexIndices[i]];
+
+            if (vec.z > 0) {
+               PutPixel(bitPointer, RGB(0, 125, 255), (int)vec.x, (int)vec.y, winWidth, winHeight);
+            }
+         }
+      } else {
+         for (int i = 0; i < winWidth * winHeight; i++) {
+            zBuffer[i] = -1e9;
+         }
+
+         for (size_t i = 0; i < indSize; i += 3) {
+            const size_t * firstIndex = &primIt->vertexIndices[i];
+            COLOURED_POINT points[3];
+
+            for (int c = 0; c < 3; c++) {
+               points[c].pos.x = (int)transformedCoords[firstIndex[c]].x;
+               points[c].pos.y = (int)transformedCoords[firstIndex[c]].y;
+               points[c].depth = transformedCoords[firstIndex[c]].z;
+               points[c].color = primIt->vertexColors[firstIndex[c]];
+            }
+
+            if (displayMode == DISPLAY_MODE::WIREFRAME) {
+               if (points[0].depth > 0 || points[1].depth > 0) {
+                  DrawLine(bitPointer, points[0], points[1], winWidth, winHeight, zBuffer);
+               }
+
+               if (points[1].depth > 0 || points[2].depth > 0) {
+                  DrawLine(bitPointer, points[1], points[2], winWidth, winHeight, zBuffer);
+               }
+
+               if (points[2].depth > 0 || points[0].depth > 0) {
+                  DrawLine(bitPointer, points[2], points[0], winWidth, winHeight, zBuffer);
+               }
+            } else {
+               if (points[2].depth > 0 || points[1].depth > 0 || points[0].depth > 0) {
+                  DrawTriangle(bitPointer, points[0], points[1], points[2], winWidth, winHeight, zBuffer);
+               }
+            }
          }
       }
    }
@@ -289,6 +598,7 @@ void DISPLAY::Draw (void) const
    BitBlt(hDC, 0, 0, winWidth, winHeight, hMemDC, 0, 0, SRCCOPY);
 
    // Clear up
+   delete [] zBuffer;
    DeleteObject(hBitmap);
    DeleteObject(hMemDC);
 
@@ -338,9 +648,16 @@ LONG WINAPI DISPLAY::DisplayProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM
       }
       break;
    case WM_MOUSEMOVE:
-      Event = EVENT::MOUSEMOVE;
       NewMousePos.x = LOWORD(lParam);
       NewMousePos.y = HIWORD(lParam);
+      break;
+   case WM_LBUTTONDOWN:
+      Event = EVENT::MOUSEMOVE;
+      OldMousePos.x = LOWORD(lParam);
+      OldMousePos.y = HIWORD(lParam);
+      break;
+   case WM_LBUTTONUP:
+      Event = EVENT::NONE;
       break;
    case WM_COMMAND:
       break;
@@ -402,11 +719,6 @@ bool DISPLAY::WinCreate (HINSTANCE hInstance, int winW, int winH)
    winWidth = winW;
    winHeight = winH;
 
-   // Set mouse position
-   POINT p;
-   GetCursorPos(&p);
-   mousePos = p;
-
    return true;
 }
 
@@ -418,7 +730,9 @@ void DISPLAY::OnResizeUpdate (void)
       winWidth = rect.right - rect.left;
       winHeight = rect.bottom - rect.top;
    }
+   Event = EVENT::NONE;
 
+   // OpenGL alternative
    /*
    HDC hDC = GetDC(hWnd);
    HGLRC hGLRC = wglCreateContext(hDC);
@@ -429,6 +743,8 @@ void DISPLAY::OnResizeUpdate (void)
 
 void DISPLAY::OnMouseMoveUpdate (void)
 {
+   mousePos = OldMousePos;
+
    mousePos.x -= NewMousePos.x;
    mousePos.y -= NewMousePos.y;
    mousePos.x *= -1;
@@ -436,6 +752,7 @@ void DISPLAY::OnMouseMoveUpdate (void)
 
    camera.MouseUpdate(mousePos, rotationSpeed);
    mousePos = NewMousePos;
+   OldMousePos = NewMousePos;
 }
 
 
@@ -445,6 +762,27 @@ void DISPLAY::OnOffsetUpdate (void)
    camera.position += Offset.x * glm::cross(camera.viewDirection, camera.up);
 
    Offset = glm::vec3(0, 0, 0);
+   Event = EVENT::NONE;
+}
+
+
+void DISPLAY::OnSwitchModeUpdate (void)
+{
+   switch (displayMode) {
+   case DISPLAY_MODE::POINTS:
+      displayMode = DISPLAY_MODE::WIREFRAME;
+      break;
+   case DISPLAY_MODE::WIREFRAME:
+      displayMode = DISPLAY_MODE::TRIANGLES;
+      break;
+   case DISPLAY_MODE::TRIANGLES:
+      displayMode = DISPLAY_MODE::POINTS;
+      break;
+   default:
+      break;
+   }
+
+   Event = EVENT::NONE;
 }
 
 
@@ -461,14 +799,11 @@ void DISPLAY::Update (void)
       OnMouseMoveUpdate();
       break;
    case EVENT::SWITCHMODE:
-      displayMode = displayMode == DISPLAY_MODE::POINTS ?
-         DISPLAY_MODE::WIREFRAME : DISPLAY_MODE::POINTS;
+      OnSwitchModeUpdate();
       break;
    default:
       break;
    }
-
-   Event = EVENT::NONE;
 }
 
 

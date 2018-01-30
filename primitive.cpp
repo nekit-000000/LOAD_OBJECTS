@@ -97,6 +97,16 @@ bool PRIMITIVE::Load (const std::string & fileName, double scale)
          ifs >> vertex.y;
          ifs >> vertex.z;
          vertex *= scale;
+         vertices.push_back(vertex);
+
+         //
+         if ((int)rand() % 2 == 0) {
+            vertexColors.push_back(RGB(0, 0, 255));
+         } else {
+            vertexColors.push_back(RGB(255, 0, 0));
+         }
+         //
+
          temp_vertices.push_back(vertex);
       } else if (line == "vn") {
          loadNormals = true;
@@ -104,6 +114,7 @@ bool PRIMITIVE::Load (const std::string & fileName, double scale)
          ifs >> normal.x;
          ifs >> normal.y;
          ifs >> normal.z;
+         normals.push_back(normal);
          temp_normals.push_back(normal);
       } else if (line == "vt") {
          loadTextureCoord = true;
@@ -119,6 +130,7 @@ bool PRIMITIVE::Load (const std::string & fileName, double scale)
 
          for (int i = 0; i < 3; i++) {
             ifs >> vertexIndex;
+            vertexIndices.push_back(vertexIndex - 1);
             //vertexIndices.push_back(vertexIndex);
             polygon[i].position = temp_vertices[vertexIndex - 1];
 
@@ -143,8 +155,7 @@ bool PRIMITIVE::Load (const std::string & fileName, double scale)
                ifs.unget();
 
                ifs >> normalIndex;
-
-               //normalIndices.push_back(normalIndex);
+               normalIndices.push_back(normalIndex - 1);
 
                polygon[i].normal = temp_normals[normalIndex - 1];
             }

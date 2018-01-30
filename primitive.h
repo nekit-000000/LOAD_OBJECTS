@@ -6,6 +6,7 @@
 
 #include <glm/glm.hpp>
 #include <string>
+#include <windows.h>
 
 
 class VERTEX {
@@ -59,6 +60,13 @@ public:
 
 private:
    std::vector<POLYGON> polygons;
+
+   ////////////////////////////////
+   std::vector<glm::vec3> vertices;
+   std::vector<glm::vec3> normals;
+   std::vector<size_t> vertexIndices;
+   std::vector<size_t> normalIndices;
+   std::vector<COLORREF> vertexColors;
 };
 
 

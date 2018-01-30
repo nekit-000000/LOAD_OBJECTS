@@ -11,8 +11,25 @@ CAMERA::CAMERA (void) :
 }
 
 
+CAMERA::CAMERA (const CAMERA & newCamera) : 
+   viewDirection(newCamera.viewDirection), 
+   position(newCamera.position),
+   up(newCamera.up)
+{
+}
+
+
 CAMERA::~CAMERA (void)
 {
+}
+
+
+CAMERA & CAMERA::operator= (const CAMERA & newCamera)
+{
+   viewDirection = newCamera.viewDirection;
+   position = newCamera.position;
+   up = newCamera.up;
+   return *this;
 }
 
 

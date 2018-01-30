@@ -16,7 +16,27 @@ class DISPLAY {
 public:
    enum class DISPLAY_MODE {
       POINTS,
-      WIREFRAME
+      WIREFRAME,
+      TRIANGLES
+   };
+
+   class COLOURED_POINT {
+   public:
+      COLOURED_POINT (void);
+      COLOURED_POINT(int x, int y, COLORREF newColor);
+      COLOURED_POINT (int x, int y, double depth, COLORREF newColor);
+      COLOURED_POINT (const glm::ivec2 & newPos, COLORREF newColor);
+      COLOURED_POINT (const glm::ivec2 & newPos, double depth, COLORREF newColor);
+      COLOURED_POINT (const COLOURED_POINT & copyPoint);
+
+      ~COLOURED_POINT (void);
+
+      COLOURED_POINT & operator= (const COLOURED_POINT & copyPoint);
+
+   public:
+      COLORREF color;
+      double depth;
+      glm::ivec2 pos;
    };
 
 public:
@@ -32,22 +52,27 @@ public:
    static void SetRotationSpeed (const float newSpeed);
 
 private:
-   static LONG WINAPI DisplayProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+   static LONG WINAPI DisplayProc    (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
    // Functions to initialize OpenGL
-   static bool SetWindowPixelFormat (HDC hDC);
-   static bool InitGL               (HDC hDC);
-   static void Close                (void);
+   static bool SetWindowPixelFormat  (HDC hDC);
+   static bool InitGL                (HDC hDC);
+   static void Close                 (void);
 
    // Auxiliary functions to draw without OpenGL
-   static void CreateDIB (HDC hDC, HBITMAP * hBitmap, COLORREF ** bitPointer, BITMAPINFO * bitmap);
-   static void PutPixel  (COLORREF * bitPointer, COLORREF color, int x, int y, int winWidth, int winHeight);
-   static void Line      (COLORREF * bitPointer, int x0, int y0, int x1, int y1, COLORREF color0, int width, int height);
+   static void CreateDIB             (HDC hDC, HBITMAP * hBitmap, COLORREF ** bitPointer, BITMAPINFO * bitmap);
+   static void PutPixel              (COLORREF * bitPointer, COLORREF color, int x, int y, int winWidth, int winHeight);
+   static void DrawTriangle          (COLORREF * bitPointer, COLOURED_POINT point1, COLOURED_POINT point2,
+                                      COLOURED_POINT point3, int winWidth, int winHeight, double * zBuffer);
+   static void DrawLine              (COLORREF * bitPointer, COLOURED_POINT & point1, COLOURED_POINT & point2,
+                                      int width, int height, double * zBuffer);
+   static COLORREF InterpolateColors (COLORREF color0, COLORREF color1, double coeff);
 
-   // Update functions            
+   // Update functions
    void OnMouseMoveUpdate         (void);
    void OnOffsetUpdate            (void);
    void OnResizeUpdate            (void);
+   void OnSwitchModeUpdate        (void);
    void Update                    (void);
 
    void Draw                      (void)    const;
