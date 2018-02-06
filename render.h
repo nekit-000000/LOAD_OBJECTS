@@ -52,6 +52,9 @@ private:
    // Auxiliary functions to draw without OpenGL
    static void CreateDIB             (HDC hDC, HBITMAP * hBitmap, COLORREF ** bitPointer, BITMAPINFO * bitmap);
    static void PutPixel              (COLORREF * bitPointer, COLORREF color, int x, int y, int winWidth, int winHeight);
+   static void PutPixel              (COLORREF * bitPointer, COLOURED_POINT point, int winWidth, int winHeight);
+   static void DrawPoint             (COLORREF * bitPointer, COLOURED_POINT point, 
+                                      int winWidth, int winHeight, double * zBuffer);
    static void DrawTriangle          (COLORREF * bitPointer, COLOURED_POINT point1, COLOURED_POINT point2,
                                       COLOURED_POINT point3, int winWidth, int winHeight, double * zBuffer);
    static void DrawLine              (COLORREF * bitPointer, const COLOURED_POINT & point1, 

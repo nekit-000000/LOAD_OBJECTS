@@ -2,6 +2,7 @@
 
 #include <glm/gtx/transform.hpp>
 #include <stack>
+#include <vector>
 
 #include "scene.h"
 
@@ -9,6 +10,18 @@
 SCENE_NODE::SCENE_NODE (void) : 
    link(NULL), next(NULL)
 {
+}
+
+
+void SCENE_NODE::AddBrother (SCENE_NODE * brother)
+{
+   SCENE_NODE * node = this;
+
+   while (node->next != NULL) {
+      node = node->next;
+   }
+
+   node->next = brother;
 }
 
 
@@ -51,30 +64,32 @@ TRANSFORM_NODE::~TRANSFORM_NODE (void)
 SCENE_NODE::~SCENE_NODE (void)
 {
    SCENE_NODE * node = this;
-   std::stack<SCENE_NODE *> arr;
+   std::vector<SCENE_NODE *> arr;
 
-   arr.push(node);
+   arr.push_back(node);
    while (!arr.empty()) {
-      node = arr.top();
-      arr.pop();
+      node = arr.back();
+      arr.pop_back();
 
       while (node->link != NULL || node->next != NULL) {
          while (node->next != NULL) {
-            arr.push(node);
+            arr.push_back(node);
             node = node->next;
          }
 
          if (node->link != NULL) {
-            arr.push(node);
+            arr.push_back(node);
             node = node->link;
          }
       }
 
       if (!arr.empty()) {
-         if (arr.top()->link == node) {
-            arr.top()->link = NULL;
-         } else {
-            arr.top()->next = NULL;
+         for (auto it = arr.begin(); it != arr.end(); it++) {
+            if ((*it)->link == node) {
+               (*it)->link = NULL;
+            } else if ((*it)->next == node) {
+               (*it)->next = NULL;
+            }
          }
       }
 
@@ -89,6 +104,10 @@ SCENE_NODE::~SCENE_NODE (void)
 
 void TRANSFORM_NODE::AddChild (SCENE_NODE * node)
 {
+   if (node->type == NODE_TYPE::TRANSFORM) {
+      ((TRANSFORM_NODE *)node)->transform = transform * ((TRANSFORM_NODE *)node)->transform;
+   }
+
    if (link == NULL) {
       link = node;
    } else {

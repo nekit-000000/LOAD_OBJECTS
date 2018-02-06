@@ -8,7 +8,7 @@
 
 
 // Variables declaration
-float DISPLAY::moveSpeed = 0.4f;
+float DISPLAY::moveSpeed = 0.1f;
 float DISPLAY::rotationSpeed = 0.01f;
 
 
@@ -352,7 +352,7 @@ void DISPLAY::SetDisplayMode (const DISPLAY_MODE & mode)
 
 void DISPLAY::SetSceneData (SCENE_NODE * root)
 {
-   render.root = root;
+   render.root->link = root;
 }
 
 

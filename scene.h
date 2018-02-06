@@ -10,6 +10,7 @@
 class SCENE_NODE {
    friend class RENDER;
    friend class TRANSFORM_NODE;
+   friend class DISPLAY;
 
 public:
    enum class  NODE_TYPE {
@@ -21,6 +22,8 @@ public:
    SCENE_NODE (void);
 
    virtual ~SCENE_NODE (void);
+
+   void AddBrother (SCENE_NODE * brother);
 
 protected:
    NODE_TYPE type;

@@ -9,20 +9,23 @@
 RENDER::RENDER (void) :
    displayMode(DISPLAY_MODE::POINTS), backgroundColor(RGB(0, 0, 0))
 {
+   root = new TRANSFORM_NODE;
 }
 
 
 RENDER::RENDER (SCENE_NODE * newRoot) :
    displayMode(DISPLAY_MODE::POINTS), backgroundColor(RGB(0, 0, 0))
 {
-   root = newRoot;
+   root = new TRANSFORM_NODE;
+   root->link = newRoot;
 }
 
 
 RENDER::RENDER (SCENE_NODE * newRoot, const CAMERA & newCamera) :
    camera(newCamera), displayMode(DISPLAY_MODE::POINTS), backgroundColor(RGB(0, 0, 0))
 {
-   root = newRoot;
+   root = new TRANSFORM_NODE;
+   root->link = newRoot;
 }
 
 
@@ -133,6 +136,28 @@ void RENDER::PutPixel (COLORREF * bitPointer, COLORREF color, int x, int y, int 
 }
 
 
+void RENDER::PutPixel (COLORREF * bitPointer, COLOURED_POINT point, int winWidth, int winHeight)
+{
+   PutPixel(bitPointer, point.color, point.pos.x, point.pos.y, winWidth, winHeight);
+}
+
+
+void RENDER::DrawPoint (COLORREF * bitPointer, COLOURED_POINT point, 
+   int winWidth, int winHeight, double * zBuffer)
+{
+   if ((winHeight - point.pos.y) <= 0 || point.pos.x >= winWidth || 
+      point.pos.x <= 0 || (winHeight - point.pos.y) >= winHeight) {
+      return;
+   }
+
+   int idx = point.pos.x + point.pos.y * winWidth;
+   if (zBuffer[idx] < point.depth) {
+      zBuffer[point.pos.x] = point.depth;
+      bitPointer[(winHeight - point.pos.y) * winWidth + point.pos.x] = point.color;
+   }
+}
+
+
 void RENDER::DrawLine (COLORREF * bitPointer, const COLOURED_POINT & point1,
    const COLOURED_POINT & point2, int winWidth, int winHeight, double * zBuffer)
 {
@@ -166,7 +191,7 @@ void RENDER::DrawLine (COLORREF * bitPointer, const COLOURED_POINT & point1,
             d += d1;
          }
 
-         if (x < 0) {
+         if (x <= 0) {
             if (sx < 0) {
                break;
             } else {
@@ -182,7 +207,7 @@ void RENDER::DrawLine (COLORREF * bitPointer, const COLOURED_POINT & point1,
             }
          }
 
-         if (y < 0) {
+         if (y <= 0) {
             if (sy < 0) {
                break;
             } else {
@@ -200,18 +225,17 @@ void RENDER::DrawLine (COLORREF * bitPointer, const COLOURED_POINT & point1,
 
          double dz = point1.depth + (point2.depth - point1.depth) * ((float)i / dx);
          int idx = x + y * winWidth;
-         if (zBuffer[idx] <= dz) {
+         if (zBuffer[idx] < dz) {
             zBuffer[idx] = dz;
             double currLen = sqrt((x - point1.pos.x) * (x - point1.pos.x) +
                (y - point1.pos.y) * (y - point1.pos.y));
             double lenCoeff = currLen / segmentLen;
             COLORREF resColor = InterpolateColors(point1.color, point2.color, lenCoeff);
-            PutPixel(bitPointer, resColor, x, y, winWidth, winHeight);
+            bitPointer[(winHeight - y) * winWidth + x] = resColor;
          }
          x += sx;
       }
-   }
-   else {
+   } else {
       int d = (dx << 1) - dy;
       int d1 = dx << 1;
       int d2 = (dx - dy) << 1;
@@ -228,7 +252,7 @@ void RENDER::DrawLine (COLORREF * bitPointer, const COLOURED_POINT & point1,
             d += d1;
          }
 
-         if (x < 0) {
+         if (x <= 0) {
             if (sx < 0) {
                break;
             } else {
@@ -244,7 +268,7 @@ void RENDER::DrawLine (COLORREF * bitPointer, const COLOURED_POINT & point1,
             }
          }
 
-         if (y < 0) {
+         if (y <= 0) {
             if (sy < 0) {
                break;
             } else {
@@ -262,13 +286,13 @@ void RENDER::DrawLine (COLORREF * bitPointer, const COLOURED_POINT & point1,
 
          double dz = point1.depth + (point2.depth - point1.depth) * ((float)i / dy);
          int idx = x + y * winWidth;
-         if (zBuffer[idx] <= dz) {
+         if (zBuffer[idx] < dz) {
             zBuffer[idx] = dz;
             double currLen = sqrt((x - point1.pos.x) * (x - point1.pos.x) +
                (y - point1.pos.y) * (y - point1.pos.y));
             double lenCoeff = currLen / segmentLen;
             COLORREF resColor = InterpolateColors(point1.color, point2.color, lenCoeff);
-            PutPixel(bitPointer, resColor, x, y, winWidth, winHeight);
+            bitPointer[(winHeight - y) * winWidth + x] = resColor;
          }
          y += sy;
       }
@@ -313,10 +337,13 @@ void RENDER::DrawTriangle (COLORREF * bitPointer, COLOURED_POINT point1,
    for (int y = 0; y <= totalHeight; y++) {
       if (y + point1.pos.y >= winHeight) {
          break;
-      } else if (point1.pos.y + y < 0) {
-         y -= point1.pos.y;
       }
 
+      if (point1.pos.y + y <= 0) {
+         y -= point1.pos.y;
+         y++;
+      }
+      
       // Counting coordinates
       float alpha = (float)y / totalHeight;
       int x1 = point1.pos.x + (int)((point3.pos.x - point1.pos.x) * alpha);
@@ -371,7 +398,7 @@ void RENDER::DrawTriangle (COLORREF * bitPointer, COLOURED_POINT point1,
          segmentLen++;
       }
 
-      for (int j = x1 > 0 ? x1 : 0; j <= x2 && j < winWidth; j++) {
+      for (int j = x1 > 0 ? x1 : 1; j <= x2 && j < winWidth; j++) {
          float phi = x2 == x1 ? 1.0f : (float)(j - x1) / (float)(x2 - x1);
          double pz = z1 + (z2 - z1) * phi;
          int idx = j + (y + point1.pos.y) * winWidth;
@@ -381,7 +408,7 @@ void RENDER::DrawTriangle (COLORREF * bitPointer, COLOURED_POINT point1,
             double currLen = sqrt((j - x1) * (j - x1));
             double lenCoeff = currLen / segmentLen;
             COLORREF resColor = InterpolateColors(color1, color2, lenCoeff);
-            PutPixel(bitPointer, resColor, j, point1.pos.y + y, winWidth, winHeight);
+            bitPointer[(winHeight - (point1.pos.y + y)) * winWidth + j] = resColor;
          }
       }
    }
@@ -423,8 +450,9 @@ void RENDER::DrawNode (const OBJECT_NODE * node, const glm::mat4 & matrixTransfo
          glm::vec3 vec = transformedCoords[prim->vertexIndices[i]];
 
          if (vec.z > 0) {
-            PutPixel(bitPointer, prim->vertexColors[prim->vertexIndices[i]], 
-               (int)vec.x, (int)vec.y, winWidth, winHeight);
+            COLOURED_POINT point((int)vec.x, (int)vec.y, vec.z, 
+               prim->vertexColors[prim->vertexIndices[i]]);
+            DrawPoint(bitPointer, point, winWidth, winHeight, zBuffer);
          }
       }
    } else {
@@ -500,7 +528,7 @@ void RENDER::DrawScene (HWND hWnd, int winWidth, int winHeight) const
    double * zBuffer = new double[winWidth * winHeight];
 
    for (int i = 0; i < winWidth * winHeight; i++) {
-      zBuffer[i] = -1e9;
+      zBuffer[i] = -INFINITY;
    }
 
    // Drawing scene
@@ -514,7 +542,7 @@ void RENDER::DrawScene (HWND hWnd, int winWidth, int winHeight) const
       queue.pop();
 
       if (node->type != NODE_TYPE::OBJECT) {
-         currentTransform = ((TRANSFORM_NODE *)node)->transform * currentTransform;
+         currentTransform = ((TRANSFORM_NODE *)node)->transform;
          node = node->link;
       }
 
