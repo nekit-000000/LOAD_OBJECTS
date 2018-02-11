@@ -12,27 +12,83 @@ float DISPLAY::moveSpeed = 0.1f;
 float DISPLAY::rotationSpeed = 0.01f;
 
 
-// Variables to interact with window
-enum class EVENT {
-   NONE,
-   MOVE,
-   RESIZE,
-   MOUSEMOVE,
-   SWITCHMODE
-} Event;
-glm::vec3 Offset;
-POINT NewMousePos;
-POINT OldMousePos;
-
-
-DISPLAY::DISPLAY (void) : 
-   hWnd(NULL), winWidth(0), winHeight(0)
+DISPLAY::DISPLAY (void) 
 {
+   AddMessage(WM_KEYDOWN, this, &DISPLAY::OnKeydownEvent);
+   AddMessage(WM_MOUSEMOVE, this, &DISPLAY::OnMouseMoveEvent);
+   AddMessage(WM_LBUTTONDOWN, this, &DISPLAY::OnLButtonDownEvent);
+   AddMessage(WM_LBUTTONUP, this, &DISPLAY::OnLButtonUpEvent);
+   AddMessage(WM_SIZE, this, &DISPLAY::OnResizeEvent);
 }
 
 
 DISPLAY::~DISPLAY (void)
 {
+}
+
+
+LRESULT DISPLAY::OnKeydownEvent (LPARAM lParam, WPARAM wParam)
+{
+   event = EVENT::MOVE;
+   offset = glm::vec3(0, 0, 0);
+   switch (wParam) {
+   case 65: // A
+      offset.x -= DISPLAY::moveSpeed;
+      break;
+   case 68: // D
+      offset.x += DISPLAY::moveSpeed;
+      break;
+   case 87: // W
+      offset.z -= DISPLAY::moveSpeed;
+      break;
+   case 83: // S
+      offset.z += DISPLAY::moveSpeed;
+      break;
+   case VK_SPACE:
+      event = EVENT::SWITCHMODE;
+      break;
+   case VK_ESCAPE:
+      PostQuitMessage(0);
+      break;
+   }
+
+   return 0;
+}
+
+
+LRESULT DISPLAY::OnMouseMoveEvent (LPARAM lParam, WPARAM wParam)
+{
+   newMousePos.x = LOWORD(lParam);
+   newMousePos.y = HIWORD(lParam);
+
+   return 0;
+}
+
+
+
+LRESULT DISPLAY::OnLButtonDownEvent (LPARAM lParam, WPARAM wParam)
+{
+   event = EVENT::MOUSEMOVE;
+   oldMousePos.x = LOWORD(lParam);
+   oldMousePos.y = HIWORD(lParam);
+
+   return 0;
+}
+
+
+LRESULT DISPLAY::OnLButtonUpEvent (LPARAM lParam, WPARAM wParam)
+{
+   event = EVENT::NONE;
+
+   return 0;
+}
+
+
+LRESULT DISPLAY::OnResizeEvent (LPARAM lParam, WPARAM wParam)
+{
+   event = EVENT::RESIZE;
+
+   return 0;
 }
 
 
@@ -128,111 +184,6 @@ void DISPLAY::Close (void)
 }
 
 
-LONG WINAPI DISPLAY::DisplayProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-   switch (message) {
-   case WM_CREATE:
-      break;
-   case WM_KEYDOWN:
-      Event = EVENT::MOVE;
-      Offset = glm::vec3(0, 0, 0);
-      switch (wParam) {
-      case 65: // A
-         Offset.x -= DISPLAY::moveSpeed;
-         break;
-      case 68: // D
-         Offset.x += DISPLAY::moveSpeed;
-         break;
-      case 87: // W
-         Offset.z -= DISPLAY::moveSpeed;
-         break;
-      case 83: // S
-         Offset.z += DISPLAY::moveSpeed;
-         break;
-      case VK_SPACE:
-         Event = EVENT::SWITCHMODE;
-         break;
-      case VK_ESCAPE:
-         PostQuitMessage(0);
-         break;
-      }
-      break;
-   case WM_MOUSEMOVE:
-      NewMousePos.x = LOWORD(lParam);
-      NewMousePos.y = HIWORD(lParam);
-      break;
-   case WM_LBUTTONDOWN:
-      Event = EVENT::MOUSEMOVE;
-      OldMousePos.x = LOWORD(lParam);
-      OldMousePos.y = HIWORD(lParam);
-      break;
-   case WM_LBUTTONUP:
-      Event = EVENT::NONE;
-      break;
-   case WM_COMMAND:
-      break;
-   case WM_ERASEBKGND:
-      break;
-   case WM_PAINT:
-      break;
-   case WM_SIZE:
-      Event = EVENT::RESIZE;
-      break;
-   case WM_DESTROY:
-      PostQuitMessage(0);
-      break;
-   default:
-      return DefWindowProc(hWnd, message, wParam, lParam);
-   }
-
-   return 0;
-}
-
-
-bool DISPLAY::WinCreate (HINSTANCE hInstance, int winW, int winH)
-{
-   if (hWnd) {
-      return false;
-   }
-
-   WNDCLASS wClass;
-
-   wClass.style = 0;
-   wClass.cbClsExtra = 0;
-   wClass.cbWndExtra = 0;
-   wClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-   wClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-   wClass.lpfnWndProc = DisplayProc;
-   wClass.hInstance = hInstance;
-   wClass.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-   wClass.lpszMenuName = NULL;
-   wClass.lpszClassName = L"Display";
-
-   if (!RegisterClass(&wClass)) {
-      MessageBox(NULL, L"Error register window class", L"ERROR", MB_OK);
-      hWnd = NULL;
-      return false;
-   }
-
-   hWnd = CreateWindow(L"Display", L"Model", WS_OVERLAPPEDWINDOW,
-      300, 200, winW, winH, NULL, NULL, hInstance, NULL);
-
-   // Initialize OpenGL
-   /*
-   HDC hDC = GetDC(hWnd);
-   if (!InitGL(hDC)) {
-      return false;
-   }
-   */
-
-   // Set window width and height
-   winWidth = winW;
-   winHeight = winH;
-
-   return true;
-}
-
-
 void DISPLAY::OnResizeUpdate (void)
 {
    RECT rect;
@@ -240,7 +191,7 @@ void DISPLAY::OnResizeUpdate (void)
       winWidth = rect.right - rect.left;
       winHeight = rect.bottom - rect.top;
    }
-   Event = EVENT::NONE;
+   event = EVENT::NONE;
 
    // OpenGL alternative
    /*
@@ -253,26 +204,26 @@ void DISPLAY::OnResizeUpdate (void)
 
 void DISPLAY::OnMouseMoveUpdate (void)
 {
-   mousePos = OldMousePos;
+   mousePos = oldMousePos;
 
-   mousePos.x -= NewMousePos.x;
-   mousePos.y -= NewMousePos.y;
+   mousePos.x -= newMousePos.x;
+   mousePos.y -= newMousePos.y;
    mousePos.x *= -1;
    mousePos.y *= -1;
 
    render.camera.MouseUpdate(mousePos, rotationSpeed);
-   mousePos = NewMousePos;
-   OldMousePos = NewMousePos;
+   mousePos = newMousePos;
+   oldMousePos = newMousePos;
 }
 
 
 void DISPLAY::OnOffsetUpdate (void)
 {
-   render.camera.position += Offset.z * render.camera.viewDirection;
-   render.camera.position += Offset.x * glm::cross(render.camera.viewDirection, render.camera.up);
+   render.camera.position += offset.z * render.camera.viewDirection;
+   render.camera.position += offset.x * glm::cross(render.camera.viewDirection, render.camera.up);
 
-   Offset = glm::vec3(0, 0, 0);
-   Event = EVENT::NONE;
+   offset = glm::vec3(0, 0, 0);
+   event = EVENT::NONE;
 }
 
 
@@ -292,13 +243,13 @@ void DISPLAY::OnSwitchModeUpdate (void)
       break;
    }
 
-   Event = EVENT::NONE;
+   event = EVENT::NONE;
 }
 
 
 void DISPLAY::Update (void)
 {
-   switch (Event) {
+   switch (event) {
    case EVENT::MOVE:
       OnOffsetUpdate();
       break;
