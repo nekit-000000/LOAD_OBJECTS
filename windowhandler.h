@@ -17,7 +17,7 @@ public:
    bool WinCreate (HINSTANCE hInstance, int winW, int winH);
 
 private:
-   static LONG WINAPI DisplayProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+   static LRESULT WINAPI DisplayProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 protected:
    void AddMessage (UINT message, MSG_FUNC func);

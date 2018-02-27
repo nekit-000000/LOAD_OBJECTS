@@ -58,13 +58,13 @@ bool WINDOW_HANDLER::WinCreate (HINSTANCE hInstance, int winW, int winH)
 }
 
 
-LONG WINAPI WINDOW_HANDLER::DisplayProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT WINAPI WINDOW_HANDLER::DisplayProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
    WINDOW_HANDLER * wnd = NULL;
 
    if (message == WM_CREATE) {
       wnd = (WINDOW_HANDLER *)LPCREATESTRUCT(lParam)->lpCreateParams;
-      SetWindowLong(hWnd, GWL_USERDATA, LONG(LPCREATESTRUCT(lParam)->lpCreateParams));
+      SetWindowLongPtr(hWnd, GWLP_USERDATA, LONG_PTR(LPCREATESTRUCT(lParam)->lpCreateParams));
       wnd->hWnd = hWnd;
    }
 
@@ -72,7 +72,7 @@ LONG WINAPI WINDOW_HANDLER::DisplayProc (HWND hWnd, UINT message, WPARAM wParam,
       PostQuitMessage(0);
    }
 
-   wnd = (WINDOW_HANDLER *)GetWindowLong(hWnd, GWL_USERDATA);
+   wnd = (WINDOW_HANDLER *)GetWindowLongPtr(hWnd, GWLP_USERDATA);
    if (wnd) {
       std::unordered_map<UINT, MSG_FUNC>::iterator it;
       it = wnd->msgMap.find(message);

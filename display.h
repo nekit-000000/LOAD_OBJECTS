@@ -18,7 +18,7 @@ public:
 
    ~DISPLAY (void);
 
-   int Run                           (void);
+   WPARAM Run                        (void);
    void SetSceneData                 (SCENE_NODE * root);
    void SetDisplayMode               (const DISPLAY_MODE & mode);
    void SetCamera                    (const CAMERA & newCam);

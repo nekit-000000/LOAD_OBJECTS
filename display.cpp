@@ -34,16 +34,16 @@ LRESULT DISPLAY::OnKeydownEvent (LPARAM lParam, WPARAM wParam)
    event = EVENT::MOVE;
    offset = glm::vec3(0, 0, 0);
    switch (wParam) {
-   case 65: // A
+   case 'A':
       offset.x -= DISPLAY::moveSpeed;
       break;
-   case 68: // D
+   case 'D': 
       offset.x += DISPLAY::moveSpeed;
       break;
-   case 87: // W
+   case 'W':
       offset.z -= DISPLAY::moveSpeed;
       break;
-   case 83: // S
+   case 'S':
       offset.z += DISPLAY::moveSpeed;
       break;
    case VK_SPACE:
@@ -160,18 +160,19 @@ bool DISPLAY::InitGL (HDC hDC)
       return false;
    }
 
+   
    HGLRC hGLRC = wglCreateContext(hDC);
    wglMakeCurrent(hDC, hGLRC);
-
+   
    glEnable(GL_ALPHA_TEST);
    glEnable(GL_DEPTH_TEST);
    glEnable(GL_COLOR_MATERIAL);
    glEnable(GL_LIGHTING);
    glEnable(GL_BLEND);
    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-   glewInit();
-
+   
+   //glewInit();
+   
    return true;
 }
 
@@ -270,7 +271,7 @@ void DISPLAY::Update (void)
 }
 
 
-int DISPLAY::Run (void)
+WPARAM DISPLAY::Run (void)
 {
    if (hWnd == NULL) {
       return 0;
