@@ -1,6 +1,5 @@
 /* START OF 'camera.cpp' FILE */
 
-#include <glm/gtx/transform.hpp>
 
 #include "camera.h"
 

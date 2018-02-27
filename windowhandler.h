@@ -4,11 +4,11 @@
 #ifndef WINDOW_HANDLER_H
 #define WINDOW_HANDLER_H
 
-#include <windows.h>
-#include <map>
-
 
 class WINDOW_HANDLER {
+public:
+   using MSG_FUNC = std::function<LRESULT(LPARAM, WPARAM)>;
+
 public:
    WINDOW_HANDLER (void);
 
@@ -17,31 +17,17 @@ public:
    bool WinCreate (HINSTANCE hInstance, int winW, int winH);
 
 private:
-   typedef LRESULT (WINDOW_HANDLER::*FuncPointer)(LPARAM, WPARAM);
-
-   // pointer struct to  the handle function
-   struct POINTER {
-   public:
-      WINDOW_HANDLER * wnd;
-      FuncPointer func;
-   };
-
    static LONG WINAPI DisplayProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 protected:
-   template<typename T>
-   bool AddMessage (UINT message, WINDOW_HANDLER * wnd,
-      LRESULT(T::*funcpointer)(LPARAM, WPARAM));
+   void AddMessage (UINT message, MSG_FUNC func);
 
 protected:
    HWND hWnd;
    int winWidth;
    int winHeight;
-   std::map<UINT, POINTER> msgMap;
+   std::unordered_map<UINT, MSG_FUNC> msgMap;
 };
-
-
-#include "windowhandler.hpp"
 
 
 #endif // WINDOW_HANDLER_H

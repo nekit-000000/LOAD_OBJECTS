@@ -74,14 +74,14 @@ LONG WINAPI WINDOW_HANDLER::DisplayProc (HWND hWnd, UINT message, WPARAM wParam,
 
    wnd = (WINDOW_HANDLER *)GetWindowLong(hWnd, GWL_USERDATA);
    if (wnd) {
-      std::map<UINT, POINTER>::iterator it;
+      std::unordered_map<UINT, MSG_FUNC>::iterator it;
       it = wnd->msgMap.find(message);
 
       if (it == wnd->msgMap.end()) {
          return DefWindowProc(hWnd, message, wParam, lParam);
       } else {
-         POINTER msg = it->second;
-         LRESULT result = (msg.wnd->*msg.func)(lParam, wParam);
+         const MSG_FUNC & func = it->second;
+         LRESULT result = func(lParam, wParam);
 
          if (result) {
             return result;
@@ -90,6 +90,12 @@ LONG WINAPI WINDOW_HANDLER::DisplayProc (HWND hWnd, UINT message, WPARAM wParam,
    }
 
    return DefWindowProc(hWnd, message, wParam, lParam);
+}
+
+
+void WINDOW_HANDLER::AddMessage (UINT message, MSG_FUNC func)
+{
+   msgMap.insert(std::make_pair(message, func));
 }
 
 

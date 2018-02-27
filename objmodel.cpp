@@ -1,8 +1,5 @@
 /* START OF 'objmodel.cpp' FILE */
 
-#include <vector>
-#include <fstream>
-#include <windows.h>
 
 #include "objmodel.h"
 

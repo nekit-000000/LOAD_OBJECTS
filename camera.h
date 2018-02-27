@@ -4,9 +4,6 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include <glm/glm.hpp>
-#include <windows.h>
-
 
 class CAMERA {
    friend class DISPLAY;

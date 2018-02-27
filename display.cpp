@@ -1,8 +1,5 @@
 /* START OF 'display.cpp' FILE */
 
-#include <gl/glew.h>
-#include <glm/gtx/transform.hpp>
-
 #include "display.h"
 #include "objmodel.h"
 
@@ -14,11 +11,16 @@ float DISPLAY::rotationSpeed = 0.01f;
 
 DISPLAY::DISPLAY (void) 
 {
-   AddMessage(WM_KEYDOWN, this, &DISPLAY::OnKeydownEvent);
-   AddMessage(WM_MOUSEMOVE, this, &DISPLAY::OnMouseMoveEvent);
-   AddMessage(WM_LBUTTONDOWN, this, &DISPLAY::OnLButtonDownEvent);
-   AddMessage(WM_LBUTTONUP, this, &DISPLAY::OnLButtonUpEvent);
-   AddMessage(WM_SIZE, this, &DISPLAY::OnResizeEvent);
+   AddMessage(WM_KEYDOWN, [this](LPARAM lparam, WPARAM wparam)
+   { return this->OnKeydownEvent(lparam, wparam); });
+   AddMessage(WM_MOUSEMOVE, [this](LPARAM lparam, WPARAM wparam)
+   { return this->OnMouseMoveEvent(lparam, wparam); });
+   AddMessage(WM_LBUTTONDOWN, [this](LPARAM lparam, WPARAM wparam)
+   { return this->OnLButtonDownEvent(lparam, wparam); });
+   AddMessage(WM_LBUTTONUP, [this](LPARAM lparam, WPARAM wparam)
+   { return this->OnLButtonUpEvent(lparam, wparam); });
+   AddMessage(WM_SIZE, [this](LPARAM lparam, WPARAM wparam)
+   { return this->OnResizeEvent(lparam, wparam); });
 }
 
 

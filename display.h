@@ -4,10 +4,6 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
-#include <windows.h>
-#include <string>
-#include <vector>
-
 #include "render.h"
 #include "objmodel.h"
 #include "camera.h"

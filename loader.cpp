@@ -1,8 +1,5 @@
 /* START OF "loader.cpp" FILE */
 
-#include <vector>
-#include <fstream>
-#include <windows.h>
 
 #include "loader.h"
 

@@ -1,8 +1,5 @@
 /* START OF 'scene.cpp' FILE */
 
-#include <glm/gtx/transform.hpp>
-#include <stack>
-#include <vector>
 
 #include "scene.h"
 

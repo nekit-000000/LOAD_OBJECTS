@@ -4,13 +4,6 @@
 #ifndef OBJMODEL_H
 #define OBJMODEL_H
 
-#include <glm/glm.hpp>
-#include <string>
-#include <windows.h>
-
-#include <vector>
-
-
 class objMODEL {
    friend class DISPLAY;
    friend class RENDER;

@@ -39,6 +39,9 @@
     <ClCompile Include="windowhandler.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="display.h">
@@ -62,7 +65,7 @@
     <ClInclude Include="windowhandler.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
-    <ClInclude Include="windowhandler.hpp">
+    <ClInclude Include="pch.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
   </ItemGroup>
