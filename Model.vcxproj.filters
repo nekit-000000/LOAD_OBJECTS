@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Заголовочные файлы\IntrusivePtr">
+      <UniqueIdentifier>{0992f471-d797-448b-9979-ce5a65ae5d8d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -42,6 +45,9 @@
     <ClCompile Include="pch.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
+    <ClCompile Include="referenced.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="display.h">
@@ -67,6 +73,18 @@
     </ClInclude>
     <ClInclude Include="pch.h">
       <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
+    <ClInclude Include="referenced.h">
+      <Filter>Заголовочные файлы\IntrusivePtr</Filter>
+    </ClInclude>
+    <ClInclude Include="intrusiveptr.h">
+      <Filter>Заголовочные файлы\IntrusivePtr</Filter>
+    </ClInclude>
+    <ClInclude Include="intrusiveptr.hpp">
+      <Filter>Заголовочные файлы\IntrusivePtr</Filter>
+    </ClInclude>
+    <ClInclude Include="referenced.hpp">
+      <Filter>Заголовочные файлы\IntrusivePtr</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
