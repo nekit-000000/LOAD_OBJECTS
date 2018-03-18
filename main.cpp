@@ -1,8 +1,6 @@
 /* START OF 'main.cpp' FILE */
 
 
-#include <vld.h>
-
 #include "display.h"
 #include "intrusiveptr.h"
 #include "transformnode.h"
@@ -32,7 +30,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
    Display.SetSceneData(parent.Get());
 
-   return Display.Run();
+   return (int)Display.Run();
 }
 
 

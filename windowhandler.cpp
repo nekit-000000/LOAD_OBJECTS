@@ -4,18 +4,18 @@
 #include "windowhandler.h"
 
 
-WINDOW_HANDLER::WINDOW_HANDLER (void) : 
+WINDOW_HANDLER::WINDOW_HANDLER(void) :
    hWnd(NULL), winWidth(0), winHeight(0)
 {
 }
 
 
-WINDOW_HANDLER::~WINDOW_HANDLER (void)
+WINDOW_HANDLER::~WINDOW_HANDLER(void)
 {
 }
 
 
-bool WINDOW_HANDLER::WinCreate (HINSTANCE hInstance, int winW, int winH)
+bool WINDOW_HANDLER::WinCreate(HINSTANCE hInstance, int winW, int winH)
 {
    WNDCLASS wClass;
    wClass.style = 0;
@@ -34,10 +34,10 @@ bool WINDOW_HANDLER::WinCreate (HINSTANCE hInstance, int winW, int winH)
       hWnd = NULL;
       return false;
    }
-   
+
    hWnd = CreateWindow(L"Display", L"Model", WS_OVERLAPPEDWINDOW,
       300, 200, winW, winH, NULL, NULL, hInstance, this);
-      
+
 
    if (!hWnd) {
       return false;
@@ -59,7 +59,7 @@ bool WINDOW_HANDLER::WinCreate (HINSTANCE hInstance, int winW, int winH)
 }
 
 
-LRESULT WINAPI WINDOW_HANDLER::DisplayProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT WINAPI WINDOW_HANDLER::DisplayProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
    WINDOW_HANDLER * wnd = NULL;
 
@@ -80,7 +80,8 @@ LRESULT WINAPI WINDOW_HANDLER::DisplayProc (HWND hWnd, UINT message, WPARAM wPar
 
       if (it == wnd->msgMap.end()) {
          return DefWindowProc(hWnd, message, wParam, lParam);
-      } else {
+      }
+      else {
          const MSG_FUNC & func = it->second;
          LRESULT result = func(lParam, wParam);
 
@@ -94,7 +95,7 @@ LRESULT WINAPI WINDOW_HANDLER::DisplayProc (HWND hWnd, UINT message, WPARAM wPar
 }
 
 
-void WINDOW_HANDLER::AddMessage (UINT message, MSG_FUNC func)
+void WINDOW_HANDLER::AddMessage(UINT message, MSG_FUNC func)
 {
    msgMap.insert(std::make_pair(message, func));
 }
