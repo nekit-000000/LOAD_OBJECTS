@@ -4,12 +4,16 @@
 #ifndef RENDER_H
 #define RENDER_H
 
+
 #include "camera.h"
-#include "scene.h"
+#include "intrusiveptr.h"
+#include "transformnode.h"
+#include "objectnode.h"
 
 
 class RENDER {
    friend class DISPLAY;
+   friend class RENDER_VISITOR;
 
 public:
    enum class DISPLAY_MODE {
@@ -38,8 +42,6 @@ public:
    };
 
 public:
-   typedef typename SCENE_NODE::NODE_TYPE NODE_TYPE;
-
    RENDER (void);
    RENDER (SCENE_NODE * newRoot);
    RENDER (SCENE_NODE * newRoot, const CAMERA & newCamera);
@@ -60,14 +62,15 @@ private:
    static COLORREF InterpolateColors (COLORREF color0, COLORREF color1, double coeff);
 
    // Node drawing function
-   void DrawNode                     (const OBJECT_NODE * node, const glm::mat4 & matrixTransform, 
-                                      COLORREF * bitPointer, int winWidth, int winHeight, double * zBuffer) const;
+   static void DrawNode              (const OBJECT_NODE * node, const glm::mat4 & matrixTransform, 
+                                      COLORREF * bitPointer, int winWidth, int winHeight, double * zBuffer, 
+                                      DISPLAY_MODE displayMode);
 
    void DrawScene                    (HWND hWnd, int winWidth, int winHeight) const;
    glm::mat4 GetProjectionMatrix     (void)    const;
 
 private:
-   SCENE_NODE * root;
+   TRANSFORM_NODE * root;
    CAMERA camera;
    DISPLAY_MODE displayMode;
    COLORREF backgroundColor;

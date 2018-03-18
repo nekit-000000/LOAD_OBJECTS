@@ -5,10 +5,10 @@
 #define LOADER_H
 
 #include "objmodel.h"
-#include "scene.h"
+#include "objectnode.h"
 
 
-OBJECT_NODE * LoadObj (const std::string & fileName);
+INTRUSIVE_PTR<OBJECT_NODE> LoadObj (const std::string & fileName);
 
 
 #endif // LOADER_H

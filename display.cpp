@@ -306,7 +306,7 @@ void DISPLAY::SetDisplayMode (const DISPLAY_MODE & mode)
 
 void DISPLAY::SetSceneData (SCENE_NODE * root)
 {
-   render.root->link = root;
+   render.root->AddChild(root);
 }
 
 

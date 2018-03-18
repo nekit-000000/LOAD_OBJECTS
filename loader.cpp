@@ -4,7 +4,7 @@
 #include "loader.h"
 
 
-OBJECT_NODE * LoadObj (const std::string & fileName)
+INTRUSIVE_PTR<OBJECT_NODE> LoadObj (const std::string & fileName)
 {
    objMODEL prim;
    bool loadTextureCoord = false;
@@ -84,7 +84,7 @@ OBJECT_NODE * LoadObj (const std::string & fileName)
 
    ifs.close();
 
-   return new OBJECT_NODE(prim);
+   return INTRUSIVE_PTR<OBJECT_NODE>(new OBJECT_NODE(prim));
 }
 
 

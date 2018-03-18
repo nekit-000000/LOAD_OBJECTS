@@ -4,10 +4,18 @@
 #ifndef OBJMODEL_H
 #define OBJMODEL_H
 
+
+#include "intrusiveptr.h"
+
+
+// Forward declaration
+class OBJECT_NODE;
+
+
 class objMODEL {
    friend class DISPLAY;
    friend class RENDER;
-   friend class OBJECT_NODE * LoadObj (const std::string & fileName);
+   friend class INTRUSIVE_PTR<OBJECT_NODE> LoadObj (const std::string & fileName);
 
 public:
    objMODEL (void);

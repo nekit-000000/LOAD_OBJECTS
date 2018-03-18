@@ -16,6 +16,9 @@
     <Filter Include="Заголовочные файлы\IntrusivePtr">
       <UniqueIdentifier>{0992f471-d797-448b-9979-ce5a65ae5d8d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Заголовочные файлы\NodeHandler">
+      <UniqueIdentifier>{bc59c0cb-737b-4c5b-ad74-8fa988d726bf}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -25,9 +28,6 @@
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
     <ClCompile Include="camera.cpp">
-      <Filter>Файлы исходного кода</Filter>
-    </ClCompile>
-    <ClCompile Include="scene.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
     <ClCompile Include="render.cpp">
@@ -48,6 +48,18 @@
     <ClCompile Include="referenced.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
+    <ClCompile Include="nodevisitor.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="objectnode.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="scenenode.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="transformnode.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="display.h">
@@ -57,9 +69,6 @@
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
     <ClInclude Include="render.h">
-      <Filter>Заголовочные файлы</Filter>
-    </ClInclude>
-    <ClInclude Include="scene.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
     <ClInclude Include="loader.h">
@@ -85,6 +94,18 @@
     </ClInclude>
     <ClInclude Include="referenced.hpp">
       <Filter>Заголовочные файлы\IntrusivePtr</Filter>
+    </ClInclude>
+    <ClInclude Include="scenenode.h">
+      <Filter>Заголовочные файлы\NodeHandler</Filter>
+    </ClInclude>
+    <ClInclude Include="transformnode.h">
+      <Filter>Заголовочные файлы\NodeHandler</Filter>
+    </ClInclude>
+    <ClInclude Include="objectnode.h">
+      <Filter>Заголовочные файлы\NodeHandler</Filter>
+    </ClInclude>
+    <ClInclude Include="nodevisitor.h">
+      <Filter>Заголовочные файлы\NodeHandler</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

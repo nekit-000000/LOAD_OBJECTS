@@ -9,6 +9,8 @@ class REFERENCED {
 public:
    REFERENCED (void); 
 
+   virtual ~REFERENCED (void) {};
+
    inline int Ref            (void) const;
    inline int Unref          (void) const;
    inline int ReferenceCount (void) const { return refCount; }

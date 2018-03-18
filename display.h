@@ -24,6 +24,7 @@ public:
    void SetCamera                    (const CAMERA & newCam);
    static void SetMoveSpeed          (const float newSpeed);
    static void SetRotationSpeed      (const float newSpeed);
+   void SetBackgroundColor           (COLORREF newColor);
 
 private:
    // Functions to initialize OpenGL
@@ -44,8 +45,6 @@ private:
    void OnResizeUpdate               (void);
    void OnSwitchModeUpdate           (void);
    void Update                       (void);
-
-   void SetBackgroundColor           (COLORREF newColor);
 
 private:
    enum class EVENT {

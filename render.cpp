@@ -2,6 +2,55 @@
 
 
 #include "render.h"
+#include "nodevisitor.h"
+
+
+class RENDER_VISITOR : public NODE_VISITOR {
+public:
+   RENDER_VISITOR (const glm::mat4 worldMatrix, int winWidth, int winHeight, COLORREF * bitPointer, 
+      RENDER::DISPLAY_MODE displayMode) :
+      worldMatrix(worldMatrix), winHeight(winHeight), winWidth(winWidth), bitPointer(bitPointer),
+      displayMode(displayMode)
+   {
+      zBuffer = new double[winWidth * winHeight];
+
+      for (int i = 0; i < winWidth * winHeight; i++) {
+         zBuffer[i] = -INFINITY;
+      }
+
+      transformStack.push(glm::mat4());
+   }
+
+   ~RENDER_VISITOR (void) 
+   {
+      delete [] zBuffer;
+   }
+
+   void Apply (OBJECT_NODE & node)
+   {
+      currentTransform = transformStack.top();
+      transformStack.pop();
+      RENDER::DrawNode((OBJECT_NODE *)&node, worldMatrix * currentTransform, bitPointer,
+         winWidth, winHeight, zBuffer, displayMode);
+   }
+
+   void Apply (TRANSFORM_NODE & node)
+   {
+      currentTransform = transformStack.top();
+      transformStack.push(node.GetTransform() * currentTransform);
+      node.Descend(*this);
+   }
+
+private:
+   glm::mat4 worldMatrix;
+   glm::mat4 currentTransform;
+   std::stack<glm::mat4> transformStack;
+   COLORREF * bitPointer;
+   RENDER::DISPLAY_MODE displayMode;
+   int winHeight;
+   int winWidth;
+   double * zBuffer;
+};
 
 
 RENDER::RENDER (void) :
@@ -14,16 +63,14 @@ RENDER::RENDER (void) :
 RENDER::RENDER (SCENE_NODE * newRoot) :
    displayMode(DISPLAY_MODE::POINTS), backgroundColor(RGB(0, 0, 0))
 {
-   root = new TRANSFORM_NODE;
-   root->link = newRoot;
+   root->AddChild(newRoot);
 }
 
 
 RENDER::RENDER (SCENE_NODE * newRoot, const CAMERA & newCamera) :
    camera(newCamera), displayMode(DISPLAY_MODE::POINTS), backgroundColor(RGB(0, 0, 0))
 {
-   root = new TRANSFORM_NODE;
-   root->link = newRoot;
+   root->AddChild(newRoot);
 }
 
 
@@ -414,7 +461,7 @@ void RENDER::DrawTriangle (COLORREF * bitPointer, COLOURED_POINT point1,
 
 
 void RENDER::DrawNode (const OBJECT_NODE * node, const glm::mat4 & matrixTransform, COLORREF * bitPointer,
-   int winWidth, int winHeight, double * zBuffer) const
+   int winWidth, int winHeight, double * zBuffer, DISPLAY_MODE displayMode)
 {
    const objMODEL * prim = &node->object;
    size_t indSize = prim->vertexIndices.size();
@@ -530,30 +577,8 @@ void RENDER::DrawScene (HWND hWnd, int winWidth, int winHeight) const
    }
 
    // Drawing scene
-   SCENE_NODE * node = root;
-   std::queue<SCENE_NODE *> queue;
-   glm::mat4 currentTransform;
-
-   queue.push(node);
-   while (!queue.empty()) {
-      node = queue.front();
-      queue.pop();
-
-      if (node->type != NODE_TYPE::OBJECT) {
-         currentTransform = ((TRANSFORM_NODE *)node)->transform;
-         node = node->link;
-      }
-
-      while (node != NULL) {
-         if (node->type == NODE_TYPE::OBJECT) {
-            DrawNode((OBJECT_NODE *)node, worldMatrix * currentTransform, bitPointer,
-               winWidth, winHeight, zBuffer);
-         } else {
-            queue.push(node);
-         }
-         node = node->next;
-      }
-   }
+   RENDER_VISITOR rv(worldMatrix, winWidth, winHeight, bitPointer, displayMode);
+   rv.Apply(*root);
 
    // Copy memory to window
    BitBlt(hDC, 0, 0, winWidth, winHeight, hMemDC, 0, 0, SRCCOPY);
