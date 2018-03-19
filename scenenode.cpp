@@ -19,7 +19,7 @@ public:
       if (node.GetNumParents() == 0 || &node == stopNode) {
          nodePathList.push_back(GetNodePath());
       } else {
-         Apply(node);
+         NODE_VISITOR::Apply(node);
       }
    }
 
@@ -55,7 +55,7 @@ void SCENE_NODE::Ascend (NODE_VISITOR & nv)
 NODE_PATH_LIST SCENE_NODE::GetParentalNodePaths (SCENE_NODE * stopNode) const
 {
    COLLECT_PARENT_PATHS cpp(stopNode);
-   const_cast<SCENE_NODE *>(this)->Accept(cpp);
+   const_cast<SCENE_NODE *>(this)->SCENE_NODE::Accept(cpp);
    return cpp.nodePathList;
 }
 
