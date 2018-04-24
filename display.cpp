@@ -5,7 +5,7 @@
 
 
 // Variables declaration
-float DISPLAY::moveSpeed = 0.1f;
+float DISPLAY::moveSpeed = 0.5f;
 float DISPLAY::rotationSpeed = 0.01f;
 
 

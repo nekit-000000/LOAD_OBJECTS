@@ -5,13 +5,32 @@
 #define REFERENCED_HPP
 
 
-inline int REFERENCED::Ref (void) const
+template <typename REFERENCED_TYPE>
+REFERENCED<REFERENCED_TYPE>::REFERENCED (void) :
+   refCount(0)
+{
+
+}
+
+
+template <typename REFERENCED_TYPE>
+void REFERENCED<REFERENCED_TYPE>::Delete (void) const
+{
+   REFERENCED * r = const_cast<REFERENCED *>(this);
+
+   delete static_cast<REFERENCED_TYPE *>(r);
+}
+
+
+template <typename REFERENCED_TYPE>
+inline int REFERENCED<REFERENCED_TYPE>::Ref (void) const
 {
    return ++refCount;
 }
 
 
-inline int REFERENCED::Unref (void) const
+template <typename REFERENCED_TYPE>
+inline int REFERENCED<REFERENCED_TYPE>::Unref (void) const
 {
    int newRef;
    newRef = --refCount;

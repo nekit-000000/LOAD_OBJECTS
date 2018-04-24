@@ -21,7 +21,7 @@ using NODE_PATH = std::vector<SCENE_NODE *>;
 using NODE_PATH_LIST = std::vector<NODE_PATH>;
 
 
-class SCENE_NODE : public REFERENCED {
+class SCENE_NODE : public REFERENCED<SCENE_NODE> {
    friend class RENDER;
    friend class TRANSFORM_NODE;
    friend class DISPLAY;

@@ -5,17 +5,18 @@
 #define REFERENCED_H
 
 
+template <typename REFERENCED_TYPE>
 class REFERENCED {
 public:
    REFERENCED (void); 
 
-   virtual ~REFERENCED (void) {};
+   ~REFERENCED (void) {};
 
    inline int Ref            (void) const;
    inline int Unref          (void) const;
    inline int ReferenceCount (void) const { return refCount; }
 
-protected:
+private:
    void Delete (void) const;
 
 protected:

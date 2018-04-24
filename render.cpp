@@ -2,6 +2,7 @@
 
 
 #include "render.h"
+#include "shadermodel.h"
 #include "nodevisitor.h"
 
 
@@ -12,10 +13,10 @@ public:
       worldMatrix(worldMatrix), winHeight(winHeight), winWidth(winWidth), bitPointer(bitPointer),
       displayMode(displayMode)
    {
-      zBuffer = new double[winWidth * winHeight];
+      zBuffer = new int[winWidth * winHeight];
 
       for (int i = 0; i < winWidth * winHeight; i++) {
-         zBuffer[i] = -INFINITY;
+         zBuffer[i] = (int)-1e9;
       }
 
       transformStack.push(glm::mat4());
@@ -49,7 +50,7 @@ private:
    RENDER::DISPLAY_MODE displayMode;
    int winHeight;
    int winWidth;
-   double * zBuffer;
+   int * zBuffer;
 };
 
 
@@ -177,6 +178,7 @@ void RENDER::PutPixel (COLORREF * bitPointer, COLORREF color, int x, int y, int 
       return;
    }
 
+   color = FlipColor(color);
    bitPointer[(winHeight - y) * winWidth + x] = color;
 }
 
@@ -187,47 +189,57 @@ void RENDER::PutPixel (COLORREF * bitPointer, COLOURED_POINT point, int winWidth
 }
 
 
-void RENDER::DrawPoint (COLORREF * bitPointer, COLOURED_POINT point, 
-   int winWidth, int winHeight, double * zBuffer)
+bool RENDER::CheckIfPointInFrame (int width, int height, int px, int py)
 {
-   if ((winHeight - point.pos.y) <= 0 || point.pos.x >= winWidth || 
-      point.pos.x <= 0 || (winHeight - point.pos.y) >= winHeight) {
+   if (py <= 0 || px >= width || px <= 0 || py >= height) {
+      return false;
+   }
+   return true;
+}
+
+
+void RENDER::DrawPoint (COLORREF * bitPointer, const glm::ivec3 & point,
+   int winWidth, int winHeight, int * zBuffer)
+{
+   if (!CheckIfPointInFrame(winWidth, winHeight, point.x, point.y) || point.z < 0) {
       return;
    }
 
-   int idx = point.pos.x + point.pos.y * winWidth;
-   if (zBuffer[idx] < point.depth) {
-      zBuffer[point.pos.x] = point.depth;
-      bitPointer[(winHeight - point.pos.y) * winWidth + point.pos.x] = point.color;
+   int x = point.x;
+   int y = point.y;
+
+   int idx = x + y * winWidth;
+   if (zBuffer[idx] < point.z) {
+      zBuffer[x] = point.z;
+      PutPixelNoCheck(bitPointer, WireFrameColor, x, y, winWidth, winHeight);
    }
 }
 
 
-void RENDER::DrawLine (COLORREF * bitPointer, const COLOURED_POINT & point1,
-   const COLOURED_POINT & point2, int winWidth, int winHeight, double * zBuffer)
+void RENDER::DrawLine (COLORREF * bitPointer, const glm::ivec3 * pts, int width, int height,
+   int * zBuffer)
 {
-   int dx = abs(point2.pos.x - point1.pos.x);
-   int dy = abs(point2.pos.y - point1.pos.y);
-   int sx = (point2.pos.x >= point1.pos.x) ? 1 : -1;
-   int sy = (point2.pos.y >= point1.pos.y) ? 1 : -1;
-   double segmentLen = sqrt(dx * dx + dy * dy);
-
-   if ((point1.pos.x < 0 && point2.pos.x < 0) ||
-      (point1.pos.x > winWidth && point2.pos.x > winWidth) ||
-      (point1.pos.y < 0 && point2.pos.y < 0) ||
-      (point1.pos.y > winHeight && point2.pos.y > winHeight)) {
+   if (pts[0].z < 0 || pts[1].z < 0 || 
+      (!CheckIfPointInFrame(width, height, (int)pts[0].x, (int)pts[0].y) &&
+      !CheckIfPointInFrame(width, height, (int)pts[1].x, (int)pts[1].y))) {
       return;
    }
+   
+   int dx = (int)abs(pts[1].x - pts[0].x);
+   int dy = (int)abs(pts[1].y - pts[0].y);
+   int sx = (int)(pts[1].x >= pts[0].x) ? 1 : -1;
+   int sy = (int)(pts[1].y >= pts[0].y) ? 1 : -1;
+   double segmentLen = sqrt(dx * dx + dy * dy);
 
    if (dy < dx) {
       int d = (dy << 1) - dx;
       int d1 = dy << 1;
       int d2 = (dy - dx) << 1;
 
-      PutPixel(bitPointer, point1.color, point1.pos.x, point1.pos.y, winWidth, winHeight);
+      PutPixel(bitPointer, WireFrameColor, (int)pts[0].x, (int)pts[0].y, width, height);
 
-      int x = point1.pos.x + sx;
-      int y = point1.pos.y;
+      int x = (int)pts[0].x + sx;
+      int y = (int)pts[0].y;
       for (int i = 1; i <= dx; i++) {
          if (d > 0) {
             d += d2;
@@ -243,7 +255,7 @@ void RENDER::DrawLine (COLORREF * bitPointer, const COLOURED_POINT & point1,
                x += sx;
                continue;
             }
-         } else if (x >= winWidth) {
+         } else if (x >= width) {
             if (sx > 0) {
                break;
             } else {
@@ -259,7 +271,7 @@ void RENDER::DrawLine (COLORREF * bitPointer, const COLOURED_POINT & point1,
                x += sx;
                continue;
             }
-         } else if (y >= winHeight) {
+         } else if (y >= height) {
             if (sy > 0) {
                break;
             } else {
@@ -268,15 +280,11 @@ void RENDER::DrawLine (COLORREF * bitPointer, const COLOURED_POINT & point1,
             }
          }
 
-         double dz = point1.depth + (point2.depth - point1.depth) * ((float)i / dx);
-         int idx = x + y * winWidth;
+         int dz = pts[0].z + (pts[1].z - pts[0].z) * (i / dx);
+         int idx = x + y * width;
          if (zBuffer[idx] < dz) {
             zBuffer[idx] = dz;
-            double currLen = sqrt((x - point1.pos.x) * (x - point1.pos.x) +
-               (y - point1.pos.y) * (y - point1.pos.y));
-            double lenCoeff = currLen / segmentLen;
-            COLORREF resColor = InterpolateColors(point1.color, point2.color, lenCoeff);
-            bitPointer[(winHeight - y) * winWidth + x] = resColor;
+            PutPixelNoCheck(bitPointer, WireFrameColor, x, y, width, height);
          }
          x += sx;
       }
@@ -285,10 +293,10 @@ void RENDER::DrawLine (COLORREF * bitPointer, const COLOURED_POINT & point1,
       int d1 = dx << 1;
       int d2 = (dx - dy) << 1;
 
-      PutPixel(bitPointer, point1.color, point1.pos.x, point1.pos.y, winWidth, winHeight);
+      PutPixel(bitPointer, WireFrameColor, (int)pts[0].x, (int)pts[0].y, width, height);
 
-      int x = point1.pos.x;
-      int y = point1.pos.y + sy;
+      int x = (int)pts[0].x;
+      int y = (int)pts[0].y + sy;
       for (int i = 1; i <= dy; i++) {
          if (d > 0) {
             d += d2;
@@ -304,7 +312,7 @@ void RENDER::DrawLine (COLORREF * bitPointer, const COLOURED_POINT & point1,
                y += sy;
                continue;
             }
-         } else if (x >= winWidth) {
+         } else if (x >= width) {
             if (sx > 0) {
                break;
             } else {
@@ -316,11 +324,12 @@ void RENDER::DrawLine (COLORREF * bitPointer, const COLOURED_POINT & point1,
          if (y <= 0) {
             if (sy < 0) {
                break;
-            } else {
+            }
+            else {
                y += sy;
                continue;
             }
-         } else if (y >= winHeight) {
+         } else if (y >= height) {
             if (sy > 0) {
                break;
             } else {
@@ -329,19 +338,29 @@ void RENDER::DrawLine (COLORREF * bitPointer, const COLOURED_POINT & point1,
             }
          }
 
-         double dz = point1.depth + (point2.depth - point1.depth) * ((float)i / dy);
-         int idx = x + y * winWidth;
+         int dz = pts[0].z + (pts[1].z - pts[0].z) * (i / dy);
+         int idx = x + y * width;
          if (zBuffer[idx] < dz) {
             zBuffer[idx] = dz;
-            double currLen = sqrt((x - point1.pos.x) * (x - point1.pos.x) +
-               (y - point1.pos.y) * (y - point1.pos.y));
-            double lenCoeff = currLen / segmentLen;
-            COLORREF resColor = InterpolateColors(point1.color, point2.color, lenCoeff);
-            bitPointer[(winHeight - y) * winWidth + x] = resColor;
+            PutPixelNoCheck(bitPointer, WireFrameColor, x, y, width, height);
          }
          y += sy;
       }
    }
+}
+
+
+void RENDER::PutPixelNoCheck (COLORREF * bitPointer, COLORREF color, int x, int y, int winWidth, int winHeight)
+{
+   bitPointer[(winHeight - y) * winWidth + x] = color;
+}
+
+
+void RENDER::DrawLine (COLORREF * bitPointer, const glm::ivec3 & pt1, const glm::vec3 & pt2, 
+   int width, int height, int * zBuffer)
+{
+   glm::ivec3 pts[2] = { pt1, pt2 };
+   DrawLine(bitPointer, pts, width, height, zBuffer);
 }
 
 
@@ -388,7 +407,7 @@ void RENDER::DrawTriangle (COLORREF * bitPointer, COLOURED_POINT point1,
          y -= point1.pos.y;
          y++;
       }
-      
+
       // Counting coordinates
       float alpha = (float)y / totalHeight;
       int x1 = point1.pos.x + (int)((point3.pos.x - point1.pos.x) * alpha);
@@ -398,7 +417,8 @@ void RENDER::DrawTriangle (COLORREF * bitPointer, COLOURED_POINT point1,
       if (y < firstHalfHeight) { // Drawing first half
          beta = (float)y / firstHalfHeight;
          x2 = point1.pos.x + (int)((point2.pos.x - point1.pos.x) * beta);
-      } else { // Drawing second half
+      }
+      else { // Drawing second half
          beta = (float)(y - firstHalfHeight) / secondHalfHeight;
          x2 = point2.pos.x + (int)((point3.pos.x - point2.pos.x) * beta);
       }
@@ -416,7 +436,8 @@ void RENDER::DrawTriangle (COLORREF * bitPointer, COLOURED_POINT point1,
          currLen2 = sqrt(y * y + (x2 - point1.pos.x) * (x2 - point1.pos.x));
          lenCoeff2 = currLen2 / length12;
          color2 = InterpolateColors(point1.color, point2.color, lenCoeff2);
-      } else {
+      }
+      else {
          currLen2 = sqrt((y - firstHalfHeight) * (y - firstHalfHeight) +
             (x2 - point2.pos.x) * (x2 - point2.pos.x));
          lenCoeff2 = currLen2 / length32;
@@ -453,6 +474,7 @@ void RENDER::DrawTriangle (COLORREF * bitPointer, COLOURED_POINT point1,
             double currLen = sqrt((j - x1) * (j - x1));
             double lenCoeff = currLen / segmentLen;
             COLORREF resColor = InterpolateColors(color1, color2, lenCoeff);
+            resColor = RGB(GetBValue(resColor), GetGValue(resColor), GetRValue(resColor));
             bitPointer[(winHeight - (point1.pos.y + y)) * winWidth + j] = resColor;
          }
       }
@@ -460,74 +482,153 @@ void RENDER::DrawTriangle (COLORREF * bitPointer, COLOURED_POINT point1,
 }
 
 
+glm::vec3 RENDER::Barycentric (const glm::vec2 & a, const glm::vec2 & b, 
+   const glm::vec2 & c, const glm::vec2 & p)
+{
+   glm::vec3 s[2];
+
+   for (int i = 2; i--; ) {
+      s[i][0] = c[i] - a[i];
+      s[i][1] = b[i] - a[i];
+      s[i][2] = a[i] - p[i];
+   }
+
+   glm::vec3 u = glm::cross(s[0], s[1]);
+
+   if (std::abs(u[2]) > 0) {
+      return glm::vec3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
+   }
+   return glm::vec3(-1, 1, 1);
+}
+
+
+void RENDER::DrawTriangleBarycentric (COLORREF * bitPointer, glm::vec4 * pts, 
+   glm::vec2 * uvs, const TEXTURE & tex, int winWidth, int winHeight, int * zBuffer)
+{
+   glm::vec2 bboxmin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+   glm::vec2 bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
+   glm::vec2 clampMax(winWidth - 1, winHeight - 1);
+   glm::vec2 clampMin(1, 1);
+
+   for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 2; j++) {
+         bboxmin[j] = std::max(clampMin[j], std::min(bboxmin[j], pts[i][j] / pts[i][3]));
+         bboxmax[j] = std::min(clampMax[j], std::max(bboxmax[j], pts[i][j] / pts[i][3]));
+      }
+   }
+
+   glm::ivec2 p;
+   COLORREF color;
+   for (p.x = (int)bboxmin.x; p.x <= bboxmax.x; p.x++) {
+      for (p.y = (int)bboxmin.y; p.y <= bboxmax.y; p.y++) {
+         glm::vec3 screen = Barycentric(pts[0] / pts[0][3], pts[1] / pts[1][3], pts[2] / pts[2][3], p);
+         float z = pts[0][2] * screen.x + pts[1][2] * screen.y + pts[2][2] * screen.z;
+         float w = pts[0][3] * screen.x + pts[1][3] * screen.y + pts[2][3] * screen.z;
+         int fragDepth = (int)(z / w);
+
+         // This is used for texture perspective correction
+         glm::vec3 clip = glm::vec3(screen.x / pts[0][3], screen.y / pts[1][3], screen.z / pts[2][3]);
+         clip /= clip.x + clip.y + clip.z;
+         //
+
+         if (screen.x < 0 || screen.y < 0 || screen.z < 0 || zBuffer[p.x + p.y * winWidth] > fragDepth) {
+            continue;
+         }
+
+         if (tex.width > 0) {
+            glm::vec2 uv;
+            glm::mat3x2 m(uvs[0], uvs[1], uvs[2]);
+            uv = m * clip;
+            int y = (int)(uv.y * (tex.height - 1));
+            int x = (int)(uv.x * (tex.width - 1));
+            color = tex.pixels[y * tex.width + x];
+         } else {
+            color = WireFrameColor;
+         }
+
+         color = FlipColor(color);
+         zBuffer[p.x + p.y * winWidth] = fragDepth;
+         PutPixelNoCheck(bitPointer, color, p.x, p.y, winWidth, winHeight);
+      }
+   }
+}
+
+
+void RENDER::DrawTriangleBarycentric (COLORREF * bitPointer, glm::vec4 * pts,
+   iSHADER & shader, int winWidth, int winHeight, int * zBuffer)
+{
+   glm::vec2 bboxmin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+   glm::vec2 bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
+   glm::vec2 clampMax(winWidth - 1, winHeight - 1);
+   glm::vec2 clampMin(1, 1);
+
+   for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 2; j++) {
+         bboxmin[j] = std::max(clampMin[j], std::min(bboxmin[j], pts[i][j] / pts[i][3]));
+         bboxmax[j] = std::min(clampMax[j], std::max(bboxmax[j], pts[i][j] / pts[i][3]));
+      }
+   }
+
+   glm::ivec2 p;
+   COLORREF color;
+   for (p.x = (int)bboxmin.x; p.x <= bboxmax.x; p.x++) {
+      for (p.y = (int)bboxmin.y; p.y <= bboxmax.y; p.y++) {
+         glm::vec3 screen = Barycentric(pts[0] / pts[0][3], pts[1] / pts[1][3], pts[2] / pts[2][3], p);
+         float z = pts[0][2] * screen.x + pts[1][2] * screen.y + pts[2][2] * screen.z;
+         float w = pts[0][3] * screen.x + pts[1][3] * screen.y + pts[2][3] * screen.z;
+         int fragDepth = (int)(z / w);
+
+         // This is used for texture perspective correction
+         glm::vec3 clip = glm::vec3(screen.x / pts[0][3], screen.y / pts[1][3], screen.z / pts[2][3]);
+         clip /= clip.x + clip.y + clip.z;
+         //
+
+         if (screen.x < 0 || screen.y < 0 || screen.z < 0 || zBuffer[p.x + p.y * winWidth] > fragDepth) {
+            continue;
+         }
+
+         bool discard = shader.Fragment(clip, color);
+         if (!discard) {
+            color = FlipColor(color);
+            zBuffer[p.x + p.y * winWidth] = fragDepth;
+            PutPixelNoCheck(bitPointer, color, p.x, p.y, winWidth, winHeight);
+         }
+      }
+   }
+}
+
+
 void RENDER::DrawNode (const OBJECT_NODE * node, const glm::mat4 & matrixTransform, COLORREF * bitPointer,
-   int winWidth, int winHeight, double * zBuffer, DISPLAY_MODE displayMode)
+   int winWidth, int winHeight, int * zBuffer, DISPLAY_MODE displayMode)
 {
    const objMODEL * prim = &node->object;
    size_t indSize = prim->vertexIndices.size();
-   std::vector<glm::vec3> transformedCoords;
 
-   for (size_t i = 0; i < prim->vertices.size(); i++) {
-      glm::vec3 vert = prim->vertices[i];
-      glm::vec4 tempVec(vert, 1);
-      glm::vec4 vec = matrixTransform * tempVec;
-      glm::vec3 pos;
+   SHADER_MODEL shader;
 
-      pos = vec;
-      pos.x *= ((float)winHeight / winWidth);
-      pos.x /= fabs(vec.w);
-      pos.y /= fabs(vec.w);
-      pos.z /= fabs(vec.w);
-
-      if (vec.w < 0) {
-         pos.z = -fabs(pos.z);
-      }
-
-      pos.x = pos.x * (winWidth / 2) + winWidth / 2;
-      pos.y = pos.y * (winHeight / 2) + winHeight / 2;
-      pos.y = (float)(winHeight - pos.y);
-
-      transformedCoords.push_back(pos);
-   }
+   shader.SetTransformMatrix(matrixTransform);
+   shader.SetModel(prim);
 
    if (displayMode == DISPLAY_MODE::POINTS) {
-      for (size_t i = 0; i < indSize; i++) {
-         glm::vec3 vec = transformedCoords[prim->vertexIndices[i]];
-
-         if (vec.z > 0) {
-            COLOURED_POINT point((int)vec.x, (int)vec.y, vec.z, 
-               prim->vertexColors[prim->vertexIndices[i]]);
-            DrawPoint(bitPointer, point, winWidth, winHeight, zBuffer);
-         }
+      for (size_t i = 0; i < prim->vertices.size(); i++) {
+         glm::vec4 vec = shader.Vertex(i, 0);
+         vec /= vec.w;
+         DrawPoint(bitPointer, vec,  winWidth, winHeight, zBuffer);
       }
    } else {
       for (size_t i = 0; i < indSize; i += 3) {
-         const size_t * firstIndex = &prim->vertexIndices[i];
-         COLOURED_POINT points[3];
-         
+         glm::vec4 pts[3];
+
          for (int c = 0; c < 3; c++) {
-            points[c].pos.x = (int)transformedCoords[firstIndex[c]].x;
-            points[c].pos.y = (int)transformedCoords[firstIndex[c]].y;
-            points[c].depth = transformedCoords[firstIndex[c]].z;
-            points[c].color = prim->vertexColors[firstIndex[c]];
+            pts[c] = shader.Vertex(i + c, c);
          }
 
          if (displayMode == DISPLAY_MODE::WIREFRAME) {
-            if (points[0].depth > 0 || points[1].depth > 0) {
-               DrawLine(bitPointer, points[0], points[1], winWidth, winHeight, zBuffer);
-            }
-
-            if (points[1].depth > 0 || points[2].depth > 0) {
-               DrawLine(bitPointer, points[1], points[2], winWidth, winHeight, zBuffer);
-            }
-
-            if (points[2].depth > 0 || points[0].depth > 0) {
-               DrawLine(bitPointer, points[2], points[0], winWidth, winHeight, zBuffer);
-            }
-         } else {
-            if (points[2].depth > 0 || points[1].depth > 0 || points[0].depth > 0) {
-               DrawTriangle(bitPointer, points[0], points[1], points[2], winWidth, winHeight, zBuffer);
-            }
+            DrawLine(bitPointer, pts[0] / pts[0].w, pts[1] / pts[1].w, winWidth, winHeight, zBuffer);
+            DrawLine(bitPointer, pts[1] / pts[1].w, pts[2] / pts[2].w, winWidth, winHeight, zBuffer);
+            DrawLine(bitPointer, pts[2] / pts[2].w, pts[0] / pts[0].w, winWidth, winHeight, zBuffer);
+         } else { // displayMode == DISPLAY_MODE::TRIANGLES
+            DrawTriangleBarycentric(bitPointer, pts, shader, winWidth, winHeight, zBuffer);
          }
       }
    }
@@ -542,16 +643,9 @@ void RENDER::DrawScene (HWND hWnd, int winWidth, int winHeight) const
    COLORREF * bitPointer;
    PAINTSTRUCT ps;
 
-   // OpenGL alternative
-   /*
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-   glBegin(displayMode);
-   */
-
-   BeginPaint(hWnd, &ps);
-
    // Get current DC
    HDC hDC = GetDC(hWnd);
+   BeginPaint(hWnd, &ps);
 
    // Create memory DC
    HDC hMemDC = CreateCompatibleDC(hDC);
@@ -569,14 +663,9 @@ void RENDER::DrawScene (HWND hWnd, int winWidth, int winHeight) const
    GetClientRect(hWnd, &rect);
    FillRect(hMemDC, &rect, brush);
 
-   glm::mat4 worldMatrix = GetProjectionMatrix() * camera.GetWorldToViewMatrix();
-   double * zBuffer = new double[winWidth * winHeight];
-
-   for (int i = 0; i < winWidth * winHeight; i++) {
-      zBuffer[i] = -INFINITY;
-   }
-
    // Drawing scene
+   glm::mat4 worldMatrix = GetViewportMatrix(0, 0, winWidth, winHeight) * 
+      GetProjectionMatrix() * camera.GetWorldToViewMatrix();
    RENDER_VISITOR rv(worldMatrix, winWidth, winHeight, bitPointer, displayMode);
    rv.Apply(*root);
 
@@ -584,23 +673,31 @@ void RENDER::DrawScene (HWND hWnd, int winWidth, int winHeight) const
    BitBlt(hDC, 0, 0, winWidth, winHeight, hMemDC, 0, 0, SRCCOPY);
 
    // Clear up
-   delete[] zBuffer;
    DeleteObject(hBitmap);
    DeleteObject(hMemDC);
 
    EndPaint(hWnd, &ps);
-
-   // OpenGL alternative
-   /*
-   glEnd();
-   SwapBuffers(wglGetCurrentDC());
-   */
 }
 
 
 glm::mat4 RENDER::GetProjectionMatrix (void) const
 {
    return glm::mat4({ 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 1 }, { 0, 0, 1, 0 });
+}
+
+
+glm::mat4 RENDER::GetViewportMatrix (int x0, int y0, int width, int height)
+{
+   glm::mat4 m = glm::mat4();
+   m[3][0] = x0 + width / 2.f;
+   m[3][1] = y0 + height / 2.f;
+   m[3][2] = 255 / 2.f;
+
+   m[0][0] = width / 2.f;
+   m[1][1] = height / 2.f;
+   m[2][2] = 255 / 2.f;
+
+   return m;
 }
 
 

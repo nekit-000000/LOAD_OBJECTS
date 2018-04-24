@@ -21,6 +21,9 @@ objMODEL::objMODEL (const objMODEL & prim)
    vertexIndices = prim.vertexIndices;
    normalIndices = prim.normalIndices;
    vertexColors = prim.vertexColors;
+   uvIndices = prim.uvIndices;
+   uvCoords = prim.uvCoords;
+   mat = prim.mat;
 }
 
 
@@ -31,6 +34,7 @@ objMODEL & objMODEL::operator= (const objMODEL & prim)
    vertexIndices = prim.vertexIndices;
    normalIndices = prim.normalIndices;
    vertexColors = prim.vertexColors;
+   mat = prim.mat;
 
    return *this;
 }
